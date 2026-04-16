@@ -41,6 +41,9 @@ const widgetRoutes = require('./src/routes/widget');
 
 const app = express();
 
+// Trust proxy headers from Nginx reverse proxy
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
