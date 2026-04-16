@@ -9,6 +9,7 @@
 - [services/bagsAuthVerifier.js](file://backend/src/services/bagsAuthVerifier.js)
 - [services/pkiChallenge.js](file://backend/src/services/pkiChallenge.js)
 - [services/saidBinding.js](file://backend/src/services/saidBinding.js)
+- [services/badgeBuilder.js](file://backend/src/services/badgeBuilder.js)
 - [routes/register.js](file://backend/src/routes/register.js)
 - [routes/verify.js](file://backend/src/routes/verify.js)
 - [utils/transform.js](file://backend/src/utils/transform.js)
@@ -17,6 +18,13 @@
 - [models/migrate.js](file://backend/src/models/migrate.js)
 - [package.json](file://backend/package.json)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Protection Against Common Vulnerabilities section to reflect consolidation of escapeXml function into transform.js utility module
+- Added new section documenting XML escaping functionality alongside HTML escaping in transform utilities
+- Updated security controls documentation to include XML escaping for SVG badge generation
+- Enhanced XSS prevention coverage to include both HTML and XML contexts
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -34,7 +42,7 @@
 This document presents the security architecture of AgentID, focusing on the multi-layered protections that safeguard the system and user data. It covers the authentication model (Ed25519 signature verification, PKI challenge-response, and wallet ownership verification via external APIs), authorization patterns, input validation, protections against common vulnerabilities, rate limiting, error handling, sensitive data handling, middleware stack, CORS configuration, and HTTPS enforcement. It also includes threat modeling, audit considerations, compliance orientation, secure communication patterns, token management, and incident response procedures.
 
 ## Project Structure
-AgentID’s backend is organized around a layered architecture:
+AgentID's backend is organized around a layered architecture:
 - Entry point initializes environment validation, middleware, routes, and health checks.
 - Configuration centralizes environment-driven settings.
 - Middleware enforces rate limits and global error handling.
@@ -61,6 +69,7 @@ subgraph "Services"
 BAGS["services/bagsAuthVerifier.js"]
 PKI["services/pkiChallenge.js"]
 SAID["services/saidBinding.js"]
+BADGE["services/badgeBuilder.js"]
 end
 subgraph "Models"
 DB["models/db.js"]
@@ -84,6 +93,8 @@ SAID --> CFG
 Q --> DB
 S --> MIG
 S --> TR
+REG --> BADGE
+VER --> BADGE
 ```
 
 **Diagram sources**
@@ -96,10 +107,11 @@ S --> TR
 - [services/bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
 - [services/pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
 - [services/saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
+- [services/badgeBuilder.js:1-551](file://backend/src/services/badgeBuilder.js#L1-L551)
 - [models/db.js:1-45](file://backend/src/models/db.js#L1-L45)
 - [models/queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
 - [models/migrate.js:1-100](file://backend/src/models/migrate.js#L1-L100)
-- [utils/transform.js:1-103](file://backend/src/utils/transform.js#L1-L103)
+- [utils/transform.js:1-119](file://backend/src/utils/transform.js#L1-L119)
 
 **Section sources**
 - [server.js:1-91](file://backend/server.js#L1-L91)
@@ -114,7 +126,7 @@ S --> TR
   - Input validation and address format checks.
 - Data protection:
   - Parameterized queries to prevent SQL injection.
-  - XSS prevention via HTML escaping utilities.
+  - XSS prevention via HTML and XML escaping utilities.
 - Secure transport and headers:
   - Helmet middleware for standard security headers.
   - CORS configured via environment variable.
@@ -128,7 +140,7 @@ S --> TR
 - [routes/verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
 - [middleware/rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [middleware/errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
-- [utils/transform.js:67-80](file://backend/src/utils/transform.js#L67-L80)
+- [utils/transform.js:67-95](file://backend/src/utils/transform.js#L67-L95)
 - [models/queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
 - [server.js:31-38](file://backend/server.js#L31-L38)
 
@@ -137,7 +149,7 @@ AgentID employs a layered security model:
 - Transport and network: Helmet hardens HTTP headers; CORS is environment-configured; rate limiting protects endpoints; health checks expose minimal surface.
 - Authentication: Wallet ownership verified via Ed25519 signatures against external services; ongoing verification via challenge-response.
 - Authorization: Strict auth limiter for registration and verification endpoints; input validation prevents malformed requests.
-- Data protection: Parameterized queries; XSS escaping; secrets via environment variables.
+- Data protection: Parameterized queries; XSS escaping for both HTML and XML contexts; secrets via environment variables.
 - Observability: Centralized error logging and controlled error responses.
 
 ```mermaid
@@ -147,7 +159,7 @@ Helmet["Helmet<br/>Security Headers"]
 CORS["CORS<br/>Origin Config"]
 Limiter["Rate Limit<br/>Default + Auth"]
 Routes["Routes<br/>Register / Verify"]
-Services["Services<br/>BAGS / PKI / SAID"]
+Services["Services<br/>BAGS / PKI / SAID / Badge"]
 Models["Models<br/>Queries + DB"]
 Utils["Utils<br/>Transform + XSS"]
 Client --> Helmet --> CORS --> Limiter --> Routes --> Services --> Models
@@ -163,8 +175,9 @@ Models --> Utils
 - [services/bagsAuthVerifier.js:18-86](file://backend/src/services/bagsAuthVerifier.js#L18-L86)
 - [services/pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
 - [services/saidBinding.js:21-54](file://backend/src/services/saidBinding.js#L21-L54)
+- [services/badgeBuilder.js:10-10](file://backend/src/services/badgeBuilder.js#L10-L10)
 - [models/queries.js:17-394](file://backend/src/models/queries.js#L17-L394)
-- [utils/transform.js:67-80](file://backend/src/utils/transform.js#L67-L80)
+- [utils/transform.js:67-95](file://backend/src/utils/transform.js#L67-L95)
 
 ## Detailed Component Analysis
 
@@ -285,22 +298,31 @@ SigValid --> |Yes| Continue["Proceed to next steps"]
 
 ### Protection Against Common Vulnerabilities
 - SQL injection: All database queries are parameterized; dynamic field updates sanitize column names and values.
-- XSS: HTML escaping utility escapes special characters in text inputs.
+- XSS: HTML and XML escaping utilities escape special characters in text inputs across different contexts.
 - CSRF: Not applicable for stateless API; mitigate by enforcing HTTPS and using short-lived tokens if JWT were introduced.
 - Insecure deserialization: No deserialization of untrusted data; cryptography uses well-established libraries.
 
+**Updated** Consolidated XML escaping functionality into transform.js utility module alongside HTML escaping for comprehensive XSS protection.
+
 ```mermaid
 flowchart TD
-In(["User Input"]) --> Escape["escapeHtml()"]
-Escape --> Out(["Safe Output"])
+In(["User Input"]) --> Context{"Context Check"}
+Context --> |HTML| EscapeHTML["escapeHtml()"]
+Context --> |XML| EscapeXML["escapeXml()"]
+EscapeHTML --> SafeHTML["Safe HTML Output"]
+EscapeXML --> SafeXML["Safe XML Output"]
+SafeHTML --> Out(["Rendered HTML"])
+SafeXML --> Out2(["Rendered XML/SVG"])
 ```
 
 **Diagram sources**
-- [utils/transform.js:67-80](file://backend/src/utils/transform.js#L67-L80)
+- [utils/transform.js:67-95](file://backend/src/utils/transform.js#L67-L95)
+- [services/badgeBuilder.js:182-183](file://backend/src/services/badgeBuilder.js#L182-L183)
 
 **Section sources**
 - [models/queries.js:17-73](file://backend/src/models/queries.js#L17-L73)
-- [utils/transform.js:67-80](file://backend/src/utils/transform.js#L67-L80)
+- [utils/transform.js:67-95](file://backend/src/utils/transform.js#L67-L95)
+- [services/badgeBuilder.js:10-10](file://backend/src/services/badgeBuilder.js#L10-L10)
 
 ### Rate Limiting Implementation
 - Default limiter: 100 requests per 15 minutes per IP.
@@ -360,14 +382,16 @@ Server --> RoutesReg["routes/register.js"]
 Server --> RoutesVer["routes/verify.js"]
 RoutesReg --> Bags["services/bagsAuthVerifier.js"]
 RoutesReg --> Said["services/saidBinding.js"]
+RoutesReg --> Badge["services/badgeBuilder.js"]
 RoutesVer --> Pki["services/pkiChallenge.js"]
 Pki --> Queries["models/queries.js"]
 Bags --> Queries
 Said --> Config["config/index.js"]
+Badge --> Transform["utils/transform.js"]
 Queries --> DB["models/db.js"]
 Server --> ErrorHandler["middleware/errorHandler.js"]
 Server --> RateLimitMW["middleware/rateLimit.js"]
-Server --> Transform["utils/transform.js"]
+Server --> Transform
 ```
 
 **Diagram sources**
@@ -377,6 +401,7 @@ Server --> Transform["utils/transform.js"]
 - [services/bagsAuthVerifier.js:6-9](file://backend/src/services/bagsAuthVerifier.js#L6-L9)
 - [services/pkiChallenge.js:9](file://backend/src/services/pkiChallenge.js#L9)
 - [services/saidBinding.js:6-7](file://backend/src/services/saidBinding.js#L6-L7)
+- [services/badgeBuilder.js:6-10](file://backend/src/services/badgeBuilder.js#L6-L10)
 - [models/queries.js:6](file://backend/src/models/queries.js#L6)
 - [models/db.js](file://backend/src/models/db.js)
 - [middleware/errorHandler.js](file://backend/src/middleware/errorHandler.js)
@@ -415,6 +440,8 @@ Common issues and mitigations:
   - Adjust auth limiter thresholds for legitimate spikes.
 - CORS errors:
   - Verify origin matches configured CORS origin.
+- XSS protection failures:
+  - Verify escapeHtml and escapeXml functions are properly imported and used in appropriate contexts.
 
 **Section sources**
 - [routes/register.js:88-101](file://backend/src/routes/register.js#L88-L101)
@@ -426,7 +453,7 @@ Common issues and mitigations:
 - [config/index.js:22-23](file://backend/src/config/index.js#L22-L23)
 
 ## Conclusion
-AgentID’s security architecture integrates cryptographic verification, robust input validation, strict rate limiting, and defensive programming practices. The Ed25519-based authentication and PKI challenge-response provide strong assurance of wallet ownership and continuous identity verification. Parameterized queries, XSS escaping, and centralized error handling further reduce risk. Deployment should enforce HTTPS, rotate secrets regularly, and monitor logs for anomalies.
+AgentID's security architecture integrates cryptographic verification, robust input validation, strict rate limiting, and defensive programming practices. The Ed25519-based authentication and PKI challenge-response provide strong assurance of wallet ownership and continuous identity verification. Parameterized queries, consolidated XSS escaping utilities (both HTML and XML), and centralized error handling further reduce risk. The consolidation of escapeXml functionality into the transform.js utility module provides comprehensive protection against cross-context injection attacks in both HTML and XML outputs, particularly important for SVG badge generation. Deployment should enforce HTTPS, rotate secrets regularly, and monitor logs for anomalies.
 
 ## Appendices
 
@@ -436,7 +463,7 @@ AgentID’s security architecture integrates cryptographic verification, robust 
   - Signature forgery: Mitigated by Ed25519 verification and external API checks.
   - Brute force registration/verification: Mitigated by strict auth rate limits.
   - Injection attacks: Mitigated by parameterized queries and input validation.
-  - Cross-site scripting: Mitigated by HTML escaping utilities.
+  - Cross-site scripting: Mitigated by HTML and XML escaping utilities in transform.js.
 - Assumptions:
   - External APIs (BAGS, SAID) remain available and responsive.
   - Secrets are managed securely and rotated periodically.
@@ -447,6 +474,7 @@ AgentID’s security architecture integrates cryptographic verification, robust 
 - Audit database schema and indexes for performance and security.
 - Test rate limiting under realistic loads.
 - Conduct penetration testing against exposed endpoints.
+- Verify XSS protection coverage across all output contexts (HTML, XML, SVG).
 
 ### Compliance Orientation
 - Data minimization: Only collect necessary fields.
@@ -462,6 +490,7 @@ AgentID’s security architecture integrates cryptographic verification, robust 
 - Forensic analysis:
   - Correlate request IDs with logs.
   - Inspect challenge/response records for tampering.
+  - Review XSS protection effectiveness across all output contexts.
 - Recovery:
   - Restore from backups after remediation.
   - Re-enable normal rate limits gradually.

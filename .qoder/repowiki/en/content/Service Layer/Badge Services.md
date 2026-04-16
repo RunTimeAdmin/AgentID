@@ -16,6 +16,13 @@
 - [agentid_build_plan.md](file://agentid_build_plan.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated dependency analysis to reflect escapeXml function consolidation into transform.js utility module
+- Added documentation for escapeXml function in transform utilities
+- Updated troubleshooting guide to reference consolidated XML escaping functionality
+- Enhanced security considerations section to include XML escaping
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -72,7 +79,7 @@ F1 --> F2
 - [backend/src/services/badgeBuilder.js:1-497](file://backend/src/services/badgeBuilder.js#L1-L497)
 - [backend/src/models/redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
 - [backend/src/config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
-- [backend/src/utils/transform.js:1-103](file://backend/src/utils/transform.js#L1-L103)
+- [backend/src/utils/transform.js:1-119](file://backend/src/utils/transform.js#L1-L119)
 - [frontend/src/components/TrustBadge.jsx:1-145](file://frontend/src/components/TrustBadge.jsx#L1-L145)
 - [frontend/src/widget/Widget.jsx:1-218](file://frontend/src/widget/Widget.jsx#L1-L218)
 - [frontend/src/widget/widget-entry.jsx:1-11](file://frontend/src/widget/widget-entry.jsx#L1-L11)
@@ -147,6 +154,7 @@ Key behaviors:
 - Color schemes: verified uses green tones, flagged uses red, unverified uses amber.
 - SVG generation: uses inline gradients and status icons; score bar reflects normalized score.
 - Widget HTML: themed CSS with glow effects, animated elements, and live refresh.
+- **Security**: Both HTML and XML content is properly escaped to prevent XSS attacks.
 
 ```mermaid
 flowchart TD
@@ -170,6 +178,19 @@ CacheSet --> ReturnJSON["Return JSON"]
 - [backend/src/services/badgeBuilder.js:17-83](file://backend/src/services/badgeBuilder.js#L17-L83)
 - [backend/src/services/badgeBuilder.js:90-162](file://backend/src/services/badgeBuilder.js#L90-L162)
 - [backend/src/services/badgeBuilder.js:169-475](file://backend/src/services/badgeBuilder.js#L169-L475)
+
+### Transform Utilities
+The transform.js module provides shared utility functions for data transformation and security:
+- **escapeHtml**: Escapes HTML special characters to prevent XSS in HTML contexts.
+- **escapeXml**: **Updated** Consolidated from badgeBuilder service for XML content security.
+- Data transformation utilities for snake_case to camelCase conversion.
+- Additional validation functions for Solana addresses.
+
+**Updated** The escapeXml function has been consolidated into the transform.js utility module to provide centralized XML escaping functionality across the application.
+
+**Section sources**
+- [backend/src/utils/transform.js:67-95](file://backend/src/utils/transform.js#L67-L95)
+- [backend/src/utils/transform.js:110-119](file://backend/src/utils/transform.js#L110-L119)
 
 ### Routes: Badge and Widget
 - Badge routes:
@@ -259,7 +280,7 @@ Note over Widget : Auto-refresh every 60s
   - reputation service (computeBagsScore).
   - redis cache (getCache/setCache).
   - config (base URL and cache TTL).
-  - transform utilities (escapeHtml/escapeXml).
+  - **Updated** transform utilities (escapeHtml, escapeXml) for XSS prevention.
 - Routes depend on badgeBuilder and apply rate limiting.
 - Frontend widget depends on axios and environment-provided base URL.
 
@@ -268,6 +289,7 @@ graph LR
 BB["badgeBuilder.js"] --> CFG["config/index.js"]
 BB --> REDIS["models/redis.js"]
 BB --> TRANS["utils/transform.js"]
+TRANS --> ESCAPEXML["escapeXml function"]
 BR["routes/badge.js"] --> BB
 WR["routes/widget.js"] --> BB
 WIDGET["frontend/widget/Widget.jsx"] --> API["Axios"]
@@ -312,8 +334,10 @@ Common issues and resolutions:
   - Widget route returns a simple HTML error page with the pubkey.
 - Redis connectivity:
   - Redis client logs errors but does not crash; cache operations fall back gracefully.
-- XSS prevention:
-  - HTML and XML escaping helpers are used to sanitize dynamic content in badgeBuilder and widget routes.
+- **Security vulnerabilities**:
+  - **Updated** Both HTML and XML content is now centrally managed through transform.js utilities to prevent XSS attacks.
+  - escapeHtml is used for HTML content in widget templates.
+  - escapeXml is used for XML content in SVG generation.
 - Widget loading:
   - Widget displays a skeleton while loading and an error state if the API fails.
 
@@ -322,12 +346,12 @@ Common issues and resolutions:
 - [backend/src/routes/badge.js:47-52](file://backend/src/routes/badge.js#L47-L52)
 - [backend/src/routes/widget.js:24-77](file://backend/src/routes/widget.js#L24-L77)
 - [backend/src/models/redis.js:27-30](file://backend/src/models/redis.js#L27-L30)
-- [backend/src/utils/transform.js:72-80](file://backend/src/utils/transform.js#L72-L80)
+- [backend/src/utils/transform.js:72-95](file://backend/src/utils/transform.js#L72-L95)
 - [backend/src/services/badgeBuilder.js:482-490](file://backend/src/services/badgeBuilder.js#L482-L490)
 - [frontend/src/widget/Widget.jsx:115-145](file://frontend/src/widget/Widget.jsx#L115-L145)
 
 ## Conclusion
-The badge services provide a robust, cache-backed pipeline for generating trust badges in JSON, SVG, and HTML widget formats. They integrate seamlessly with the frontend TrustBadge component and the standalone widget, offering consistent theming, responsive design, and performance optimizations through caching and rate limiting.
+The badge services provide a robust, cache-backed pipeline for generating trust badges in JSON, SVG, and HTML widget formats. They integrate seamlessly with the frontend TrustBadge component and the standalone widget, offering consistent theming, responsive design, and performance optimizations through caching and rate limiting. The centralized security utilities ensure comprehensive protection against XSS attacks across all badge generation contexts.
 
 ## Appendices
 
@@ -383,3 +407,18 @@ The badge services provide a robust, cache-backed pipeline for generating trust 
 - [frontend/src/components/TrustBadge.jsx:84-89](file://frontend/src/components/TrustBadge.jsx#L84-L89)
 - [frontend/src/widget/Widget.jsx:150-214](file://frontend/src/widget/Widget.jsx#L150-L214)
 - [frontend/src/widget/widget.css:33-55](file://frontend/src/widget/widget.css#L33-L55)
+
+### Security Considerations
+- **Updated** XSS Prevention:
+  - Centralized security utilities in transform.js provide consistent escaping across all badge generation contexts.
+  - escapeHtml protects HTML content in widget templates.
+  - escapeXml protects XML content in SVG generation.
+  - Both functions handle edge cases including null/undefined inputs and non-string types.
+- Input Validation:
+  - Solana address validation ensures only valid public keys are processed.
+  - Comprehensive test coverage validates escaping behavior for various input scenarios.
+
+**Section sources**
+- [backend/src/utils/transform.js:67-95](file://backend/src/utils/transform.js#L67-L95)
+- [backend/src/utils/transform.js:102-108](file://backend/src/utils/transform.js#L102-L108)
+- [backend/tests/transform.test.js:113-153](file://backend/tests/transform.test.js#L113-L153)

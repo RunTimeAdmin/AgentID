@@ -4,6 +4,7 @@
  * Run with: node src/models/migrate.js
  */
 
+require('dotenv').config();
 const { pool } = require('./db');
 
 const CREATE_TABLES_SQL = `
