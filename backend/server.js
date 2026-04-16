@@ -1,12 +1,25 @@
 require('dotenv').config();
 
-// Validate required environment variables
-const required = ['DATABASE_URL'];
+// Required environment variables - server will not start without these
+const required = ['DATABASE_URL', 'BAGS_API_KEY', 'REDIS_URL'];
 const missing = required.filter(key => !process.env[key]);
 if (missing.length > 0) {
-  console.error(`Missing required environment variables: ${missing.join(', ')}`);
-  console.error('Copy .env.example to .env and configure the values.');
+  console.error('========================================');
+  console.error('FATAL: Missing required environment variables:');
+  missing.forEach(key => console.error(`  - ${key}`));
+  console.error('');
+  console.error('Copy .env.example to .env and configure:');
+  console.error('  cp .env.example .env');
+  console.error('========================================');
   process.exit(1);
+}
+
+// Recommended environment variables - warn but allow startup
+const recommended = ['CORS_ORIGIN', 'AGENTID_BASE_URL'];
+const missingRecommended = recommended.filter(key => !process.env[key]);
+if (missingRecommended.length > 0) {
+  console.warn('WARNING: Missing recommended environment variables (using defaults):');
+  missingRecommended.forEach(key => console.warn(`  - ${key}`));
 }
 
 const express = require('express');

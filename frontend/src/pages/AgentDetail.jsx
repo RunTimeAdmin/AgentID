@@ -214,10 +214,7 @@ export default function AgentDetail() {
   const handleFlagSubmit = async (flagData) => {
     setFlagSubmitting(true);
     try {
-      await flagAgent(pubkey, {
-        ...flagData,
-        reporterPubkey: flagData.reporterPubkey || 'anonymous',  // TODO: Replace with connected wallet pubkey
-      });
+      await flagAgent(pubkey, flagData);
       // Refresh flags after submission
       const flagsData = await getFlags(pubkey);
       setFlags(flagsData.flags || []);

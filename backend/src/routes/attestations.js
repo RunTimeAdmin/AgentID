@@ -14,7 +14,9 @@ const {
 } = require('../models/queries');
 const { refreshAndStoreScore } = require('../services/bagsReputation');
 const { defaultLimiter } = require('../middleware/rateLimit');
-const { transformAgent } = require('../utils/transform');
+const { transformAgent, isValidSolanaAddress } = require('../utils/transform');
+const nacl = require('tweetnacl');
+const bs58 = require('bs58');
 
 const router = express.Router();
 
@@ -73,16 +75,12 @@ router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => 
 
 /**
  * POST /agents/:pubkey/flag
- * Flag suspicious behavior
- * 
- * TODO: Add signature verification for reporterPubkey to ensure proof-of-ownership.
- * The reporter should sign a message containing the pubkey and reason to prevent
- * spoofing of reporter identity.
+ * Flag suspicious behavior with cryptographic proof-of-ownership
  */
 router.post('/agents/:pubkey/flag', defaultLimiter, async (req, res, next) => {
   try {
     const { pubkey } = req.params;
-    const { reporterPubkey, reason, evidence } = req.body;
+    const { reporterPubkey, signature, timestamp, reason, evidence } = req.body;
 
     // Validate required fields
     if (!reporterPubkey || typeof reporterPubkey !== 'string') {
@@ -91,9 +89,60 @@ router.post('/agents/:pubkey/flag', defaultLimiter, async (req, res, next) => {
       });
     }
 
+    if (!signature || typeof signature !== 'string') {
+      return res.status(400).json({
+        error: 'signature is required and must be a string'
+      });
+    }
+
+    if (!timestamp || typeof timestamp !== 'number') {
+      return res.status(400).json({
+        error: 'timestamp is required and must be a number'
+      });
+    }
+
     if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
       return res.status(400).json({
         error: 'reason is required and must be a non-empty string'
+      });
+    }
+
+    // Validate reporterPubkey is a valid Solana address
+    if (!isValidSolanaAddress(reporterPubkey)) {
+      return res.status(400).json({
+        error: 'reporterPubkey must be a valid Solana address'
+      });
+    }
+
+    // Check timestamp is within 5 minutes (300000ms) for replay protection
+    const now = Date.now();
+    const timeDiff = Math.abs(now - timestamp);
+    if (timeDiff > 300000) {
+      return res.status(400).json({
+        error: 'Timestamp is too old or too far in the future. Must be within 5 minutes of current time.'
+      });
+    }
+
+    // Construct the message to verify
+    const message = `AGENTID-FLAG:${pubkey}:${reporterPubkey}:${timestamp}`;
+
+    // Verify the Ed25519 signature
+    let isValid = false;
+    try {
+      const messageBytes = Buffer.from(message, 'utf8');
+      const sigBytes = bs58.decode(signature);
+      const reporterKeyBytes = bs58.decode(reporterPubkey);
+
+      isValid = nacl.sign.detached.verify(messageBytes, sigBytes, reporterKeyBytes);
+    } catch (error) {
+      return res.status(400).json({
+        error: 'Invalid signature format'
+      });
+    }
+
+    if (!isValid) {
+      return res.status(401).json({
+        error: 'Invalid reporter signature'
       });
     }
 

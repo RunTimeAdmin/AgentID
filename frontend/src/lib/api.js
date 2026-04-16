@@ -89,6 +89,7 @@ export const attestAgent = async (pubkey, attestationData) => {
 };
 
 export const flagAgent = async (pubkey, flagData) => {
+  // flagData should include: reporterPubkey, signature, timestamp, reason, evidence (optional)
   const response = await api.post(`/agents/${pubkey}/flag`, flagData);
   return response.data;
 };

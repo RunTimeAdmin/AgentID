@@ -1,12 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
 export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
   const [reason, setReason] = useState('');
   const [evidence, setEvidence] = useState('');
   const [reporterPubkey, setReporterPubkey] = useState('');
+  const [signature, setSignature] = useState('');
+  const [timestamp, setTimestamp] = useState(Date.now());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Generate message to sign whenever reporterPubkey or timestamp changes
+  const messageToSign = reporterPubkey.trim()
+    ? `AGENTID-FLAG:${agentPubkey}:${reporterPubkey.trim()}:${timestamp}`
+    : '';
+
+  // Update timestamp when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimestamp(Date.now());
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -30,17 +44,26 @@ export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
       }
     }
 
+    // Validate signature is provided
+    if (!signature.trim()) {
+      setError('Signature is required. Please sign the message with your private key.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit({
         reason: reason.trim(),
         evidence: parsedEvidence,
-        reporterPubkey: reporterPubkey.trim() || 'anonymous',
+        reporterPubkey: reporterPubkey.trim(),
+        signature: signature.trim(),
+        timestamp,
       });
       // Reset form on success
       setReason('');
       setEvidence('');
       setReporterPubkey('');
+      setSignature('');
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to submit flag. Please try again.');
@@ -94,7 +117,7 @@ export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
             {/* Reporter Pubkey Input */}
             <div>
               <label htmlFor="flag-reporter" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                Your Wallet Address <span className="text-[var(--text-muted)] font-normal">(optional)</span>
+                Your Wallet Address <span className="text-red-400">*</span>
               </label>
               <input
                 id="flag-reporter"
@@ -104,9 +127,43 @@ export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
                 placeholder="Paste your Solana wallet address (pubkey)..."
                 className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] transition-colors font-mono text-sm"
                 disabled={isSubmitting}
+                required
               />
               <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                Optional: Provide your wallet address to identify yourself as the reporter. Leave blank to remain anonymous.
+                Required: Your Solana wallet public key. You must prove ownership by signing a message.
+              </p>
+            </div>
+
+            {/* Message to Sign */}
+            {reporterPubkey.trim() && (
+              <div className="p-3 rounded-lg bg-[var(--bg-tertiary)]/50 border border-[var(--border-subtle)]">
+                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Message to Sign</div>
+                <div className="font-mono text-xs text-[var(--text-secondary)] break-all bg-[var(--bg-tertiary)] p-2 rounded">
+                  {messageToSign}
+                </div>
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  Sign this exact message with your Ed25519 private key to prove ownership.
+                </p>
+              </div>
+            )}
+
+            {/* Signature Input */}
+            <div>
+              <label htmlFor="flag-signature" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                Signature <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                id="flag-signature"
+                value={signature}
+                onChange={(e) => setSignature(e.target.value)}
+                placeholder="Paste the base58-encoded signature of the message above..."
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] transition-colors font-mono text-sm resize-none"
+                disabled={isSubmitting}
+                required
+              />
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                Required: The Ed25519 signature of the message above, encoded in base58.
               </p>
             </div>
 
