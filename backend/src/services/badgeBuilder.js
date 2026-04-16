@@ -37,12 +37,16 @@ async function getBadgeJSON(agentId) {
     const successRate = actions.total > 0 ? actions.successful / actions.total : 0;
 
     // Determine status and badge
+    // Status is based on PKI verification (challenge-response completion)
+    // NOT on reputation score - that's what 'tier' is for
+    const hasCompletedVerification = agent.last_verified !== null;
+    
     let status, badge, label;
     if (agent.status === 'flagged') {
       status = 'flagged';
       badge = '🔴';
       label = 'FLAGGED';
-    } else if (agent.status === 'verified' && reputation.score >= 60) {
+    } else if (hasCompletedVerification) {
       status = 'verified';
       badge = '✅';
       label = 'VERIFIED AGENT';

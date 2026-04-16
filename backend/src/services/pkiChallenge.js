@@ -23,19 +23,22 @@ async function issueChallenge(agentId, pubkey) {
   // Calculate expiration time
   const expiresAt = new Date(Date.now() + config.challengeExpirySeconds * 1000);
 
+  // Encode challenge as base58 (same format returned to client and signed)
+  const challengeBase58 = bs58.encode(Buffer.from(challengeString));
+
   // Store in database
   await createVerification({
     agentId,
     pubkey,
     nonce,
-    challenge: challengeString,
+    challenge: challengeBase58,
     expiresAt
   });
 
   // Return base58-encoded challenge
   return {
     nonce,
-    challenge: bs58.encode(Buffer.from(challengeString)),
+    challenge: challengeBase58,
     expiresIn: config.challengeExpirySeconds
   };
 }
@@ -73,7 +76,7 @@ async function verifyChallenge(agentId, pubkey, nonce, signature) {
   try {
     sigBytes = bs58.decode(signature);
     pubkeyBytes = bs58.decode(pubkey);
-    messageBytes = Buffer.from(verification.challenge, 'utf-8');
+    messageBytes = bs58.decode(verification.challenge);
   } catch (error) {
     throw new Error(`Invalid encoding: ${error.message}`);
   }

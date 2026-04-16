@@ -84,7 +84,17 @@ router.post('/register', authLimiter, async (req, res, next) => {
     }
 
     // 2. Verify the nonce is present in the message (prevents replay of arbitrary signatures)
-    if (!message.includes(nonce)) {
+    // The message is base58-encoded, so we need to decode it first to check for nonce
+    let messagePlain = message;
+    try {
+      const bs58 = require('bs58');
+      const decodedBytes = bs58.decode(message);
+      messagePlain = Buffer.from(decodedBytes).toString('utf8');
+    } catch (e) {
+      // Message is not base58 encoded, use as-is (plaintext)
+    }
+    
+    if (!messagePlain.includes(nonce)) {
       return res.status(400).json({
         error: 'Message must contain the nonce'
       });

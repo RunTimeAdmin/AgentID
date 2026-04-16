@@ -11,10 +11,10 @@ const { authLimiter } = require('../middleware/rateLimit');
 const router = express.Router();
 
 /**
- * POST /verify/challenge
+ * POST /challenge
  * Issue a PKI challenge for an agent
  */
-router.post('/verify/challenge', authLimiter, async (req, res, next) => {
+router.post('/challenge', authLimiter, async (req, res, next) => {
   try {
     // 1. Validate: requires agentId in body
     const { agentId } = req.body;
@@ -46,10 +46,10 @@ router.post('/verify/challenge', authLimiter, async (req, res, next) => {
 });
 
 /**
- * POST /verify/response
+ * POST /response
  * Verify signed challenge response
  */
-router.post('/verify/response', authLimiter, async (req, res, next) => {
+router.post('/response', authLimiter, async (req, res, next) => {
   try {
     // 1. Validate: requires agentId, nonce, signature in body
     const { agentId, nonce, signature } = req.body;

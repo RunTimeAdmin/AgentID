@@ -205,7 +205,6 @@ async function incrementActions(agentId, success) {
   const sql = `
     UPDATE agent_identities 
     SET 
-      total_actions = total_actions + 1,
       successful_actions = successful_actions + CASE WHEN $1 THEN 1 ELSE 0 END,
       failed_actions = failed_actions + CASE WHEN $1 THEN 0 ELSE 1 END
     WHERE agent_id = $2 
@@ -222,7 +221,7 @@ async function incrementActions(agentId, success) {
  */
 async function getAgentActions(agentId) {
   const sql = `
-    SELECT total_actions, successful_actions, failed_actions 
+    SELECT successful_actions, failed_actions 
     FROM agent_identities 
     WHERE agent_id = $1
   `;
@@ -230,10 +229,12 @@ async function getAgentActions(agentId) {
   if (!result.rows[0]) return null;
   
   const row = result.rows[0];
+  const successful = parseInt(row.successful_actions, 10) || 0;
+  const failed = parseInt(row.failed_actions, 10) || 0;
   return {
-    total: parseInt(row.total_actions, 10),
-    successful: parseInt(row.successful_actions, 10),
-    failed: parseInt(row.failed_actions, 10)
+    total: successful + failed,
+    successful: successful,
+    failed: failed
   };
 }
 

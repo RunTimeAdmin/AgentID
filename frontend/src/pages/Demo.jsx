@@ -170,18 +170,39 @@ export default function Demo() {
     setError(null);
 
     try {
+      // Generate nonce and message for registration signature
+      const nonce = crypto.randomUUID();
+      const timestamp = Date.now();
+      const messagePlain = `AGENTID-REGISTER:${agentData.name}:${nonce}:${timestamp}`;
+      
+      // Backend expects base58-encoded message for verification
+      const messageBytes = new TextEncoder().encode(messagePlain);
+      const message = bs58.encode(messageBytes);
+      
+      // Sign the message with the generated keypair
+      const signatureBytes = nacl.sign.detached(messageBytes, keypair.secretKey);
+      const signature = bs58.encode(signatureBytes);
+
       const registrationData = {
         pubkey: getPublicKeyBase58(),
         name: agentData.name,
         description: agentData.description,
         capabilities: agentData.capabilities,
         categories: agentData.categories,
+        signature,
+        message,
+        nonce,
       };
 
       const response = await registerAgent(registrationData);
       setRegisteredAgent(response);
-      // Store agentId from response (could be in different locations depending on API structure)
-      const newAgentId = response.agent?.agentId || response.agent_id || response.agentId || response.id;
+      // Extract agentId from response - backend returns it at top level as agentId
+      // and also inside agent object as agentId (transformed from agent_id)
+      const newAgentId = response.agentId || response.agent?.agentId || response.agent_id || response.id;
+      if (!newAgentId) {
+        console.error('Failed to extract agentId from response:', response);
+        throw new Error('Registration response missing agentId');
+      }
       setAgentId(newAgentId);
       setCurrentStep(3);
     } catch (err) {
@@ -210,8 +231,9 @@ export default function Demo() {
   const signChallenge = () => {
     if (!challengeData || !keypair) return;
 
-    const message = new TextEncoder().encode(challengeData.challenge);
-    const sig = nacl.sign.detached(message, keypair.secretKey);
+    // The challenge from server is base58-encoded, so we need to decode it before signing
+    const messageBytes = bs58.decode(challengeData.challenge);
+    const sig = nacl.sign.detached(messageBytes, keypair.secretKey);
     setSignature(bs58.encode(sig));
   };
 
@@ -481,15 +503,15 @@ export default function Demo() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-[var(--text-muted)]">Agent ID:</span>
-                  <span className="text-[var(--text-primary)] font-mono">{registeredAgent.id}</span>
+                  <span className="text-[var(--text-primary)] font-mono">{registeredAgent.agent?.agentId || registeredAgent.agentId}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--text-muted)]">Status:</span>
-                  <span className="text-[var(--accent-amber)] capitalize">{registeredAgent.status}</span>
+                  <span className="text-[var(--accent-amber)] capitalize">{registeredAgent.agent?.status}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--text-muted)]">Registered:</span>
-                  <span className="text-[var(--text-primary)]">{new Date(registeredAgent.registered_at).toLocaleString()}</span>
+                  <span className="text-[var(--text-primary)]">{new Date(registeredAgent.agent?.registeredAt).toLocaleString()}</span>
                 </div>
               </div>
             </div>
