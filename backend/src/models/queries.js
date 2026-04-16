@@ -17,8 +17,8 @@ const { query } = require('./db');
 async function createAgent({ pubkey, name, description, tokenMint, capabilitySet, creatorX, creatorWallet }) {
   const sql = `
     INSERT INTO agent_identities 
-      (pubkey, name, description, token_mint, capability_set, creator_x, creator_wallet)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+      (pubkey, name, description, token_mint, capability_set, creator_x, creator_wallet, registered_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
     RETURNING *
   `;
   const result = await query(sql, [

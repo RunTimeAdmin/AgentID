@@ -340,11 +340,14 @@ export default function Demo() {
           <SparkleIcon className="w-4 h-4" />
           Interactive Demo
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          <span className="gradient-text">Try AgentID</span>
-        </h1>
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <img src="/AgentIDLogo.png" alt="AgentID" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <h1 className="text-4xl md:text-5xl font-bold">
+            <span className="gradient-text">Try AgentID</span>
+          </h1>
+        </div>
         <p className="text-[var(--text-secondary)] text-lg max-w-2xl mx-auto">
-          Experience the full challenge-response verification flow without needing your own keypair. 
+          Experience the full challenge-response verification flow without needing your own keypair.
           This demo generates a throwaway Ed25519 keypair in your browser and walks you through each step.
         </p>
       </div>

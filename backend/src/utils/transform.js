@@ -22,6 +22,10 @@ function snakeToCamel(obj) {
     return obj;
   }
 
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+
   if (Array.isArray(obj)) {
     return obj.map(item => snakeToCamel(item));
   }

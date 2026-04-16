@@ -101,7 +101,7 @@ async function computeBagsScore(agentId) {
     } else if (totalScore >= 40) {
       label = 'LOW';
     } else {
-      label = 'UNVERIFIED';
+      label = 'NEW AGENT';
     }
 
     return {

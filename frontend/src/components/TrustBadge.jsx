@@ -1,41 +1,123 @@
 import PropTypes from 'prop-types';
 
+// Premium Shield Badge Icon with AgentID branding
+function VerifiedShieldIcon({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Outer shield with gradient */}
+      <defs>
+        <linearGradient id="shieldGradient" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="50%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#d97706" />
+        </linearGradient>
+        <linearGradient id="shieldInnerGradient" x1="12" y1="4" x2="12" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#fef3c7" />
+          <stop offset="100%" stopColor="#fde68a" />
+        </linearGradient>
+        <filter id="shieldGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+      {/* Shield outline */}
+      <path
+        d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"
+        stroke="url(#shieldGradient)"
+        strokeWidth="2"
+        fill="url(#shieldInnerGradient)"
+        fillOpacity="0.15"
+      />
+      {/* Inner shield highlight */}
+      <path
+        d="M12 4L6 6.5v4.59c0 3.79 2.56 7.32 6 8.41 3.44-1.09 6-4.62 6-8.41V6.5l-6-2.5z"
+        fill="url(#shieldInnerGradient)"
+        fillOpacity="0.3"
+      />
+      {/* Checkmark */}
+      <path
+        d="M9 12l2 2 4-4"
+        stroke="#059669"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Sparkle accents */}
+      <circle cx="17" cy="7" r="1" fill="#fbbf24" />
+      <circle cx="19" cy="9" r="0.5" fill="#fbbf24" />
+    </svg>
+  );
+}
+
+// Unverified warning icon
+function UnverifiedIcon({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"
+        stroke="#9ca3af"
+        strokeWidth="2"
+        fill="#9ca3af"
+        fillOpacity="0.1"
+      />
+      <path
+        d="M12 9v4m0 4h.01"
+        stroke="#6b7280"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Flagged warning icon
+function FlaggedIcon({ className = '' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"
+        stroke="#ef4444"
+        strokeWidth="2"
+        fill="#ef4444"
+        fillOpacity="0.15"
+      />
+      <path
+        d="M12 8v4m0 4h.01"
+        stroke="#dc2626"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const statusConfig = {
   verified: {
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-      </svg>
-    ),
+    icon: <VerifiedShieldIcon className="w-6 h-6" />,
     label: 'VERIFIED AGENT',
     bgClass: 'status-verified',
-    glowClass: 'shadow-[0_0_20px_rgba(16,185,129,0.2)]',
-    iconBg: 'bg-[var(--accent-emerald)]/20',
-    iconColor: 'text-[var(--accent-emerald)]',
+    glowClass: 'shadow-[0_0_25px_rgba(251,191,36,0.25)]',
+    iconBg: 'bg-gradient-to-br from-amber-400/20 to-yellow-500/20',
+    iconColor: 'text-amber-500',
   },
   unverified: {
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-    ),
+    icon: <UnverifiedIcon className="w-6 h-6" />,
     label: 'UNVERIFIED',
     bgClass: 'status-unverified',
-    glowClass: 'shadow-[0_0_20px_rgba(245,158,11,0.15)]',
-    iconBg: 'bg-[var(--accent-amber)]/20',
-    iconColor: 'text-[var(--accent-amber)]',
+    glowClass: 'shadow-[0_0_20px_rgba(156,163,175,0.15)]',
+    iconBg: 'bg-gray-500/20',
+    iconColor: 'text-gray-500',
   },
   flagged: {
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    icon: <FlaggedIcon className="w-6 h-6" />,
     label: 'FLAGGED',
     bgClass: 'status-flagged',
     glowClass: 'shadow-[0_0_20px_rgba(239,68,68,0.2)]',
-    iconBg: 'bg-[var(--accent-red)]/20',
-    iconColor: 'text-[var(--accent-red)]',
+    iconBg: 'bg-red-500/20',
+    iconColor: 'text-red-500',
   },
 };
 
@@ -83,8 +165,10 @@ export default function TrustBadge({
                     isVerified ? tierConfig.standard : null;
   
   const formatDate = (dateString) => {
-    if (!dateString) return 'Unknown';
+    if (!dateString) return 'Never';
     const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return 'Never';
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 

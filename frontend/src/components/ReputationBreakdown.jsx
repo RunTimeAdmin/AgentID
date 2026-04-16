@@ -63,7 +63,7 @@ export default function ReputationBreakdown({ breakdown }) {
     if (score >= 80) return 'HIGH';
     if (score >= 60) return 'MEDIUM';
     if (score >= 40) return 'LOW';
-    return 'UNVERIFIED';
+    return 'NEW AGENT';
   };
 
   return (

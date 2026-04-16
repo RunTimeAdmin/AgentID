@@ -85,8 +85,10 @@ function truncatePubkey(pubkey) {
 
 // Format date nicely
 function formatDate(dateString) {
-  if (!dateString) return 'Unknown';
+  if (!dateString) return 'Never';
   const date = new Date(dateString);
+  // Check if date is valid
+  if (isNaN(date.getTime())) return 'Never';
   return date.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -407,16 +409,16 @@ export default function AgentDetail() {
                   </div>
                 </div>
               )}
-              <div className="p-4 rounded-xl bg-[var(--bg-tertiary)]/30 border border-[var(--border-subtle)]">
-                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Registered</div>
-                <div className="text-sm text-[var(--text-secondary)]">{formatDate(agent.registeredAt)}</div>
-              </div>
-              {agent.lastVerified && (
+              {agent.registeredAt && (
                 <div className="p-4 rounded-xl bg-[var(--bg-tertiary)]/30 border border-[var(--border-subtle)]">
-                  <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Last Verified</div>
-                  <div className="text-sm text-[var(--text-secondary)]">{formatDate(agent.lastVerified)}</div>
+                  <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Registered</div>
+                  <div className="text-sm text-[var(--text-secondary)]">{formatDate(agent.registeredAt)}</div>
                 </div>
               )}
+              <div className="p-4 rounded-xl bg-[var(--bg-tertiary)]/30 border border-[var(--border-subtle)]">
+                <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">Last Verified</div>
+                <div className="text-sm text-[var(--text-secondary)]">{formatDate(agent.lastVerified)}</div>
+              </div>
             </div>
           </div>
 
