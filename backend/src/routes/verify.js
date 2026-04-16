@@ -7,6 +7,7 @@ const express = require('express');
 const { issueChallenge, verifyChallenge } = require('../services/pkiChallenge');
 const { getAgent } = require('../models/queries');
 const { authLimiter } = require('../middleware/rateLimit');
+const { isValidSolanaAddress } = require('../utils/transform');
 
 const router = express.Router();
 
@@ -23,6 +24,10 @@ router.post('/verify/challenge', authLimiter, async (req, res, next) => {
       return res.status(400).json({
         error: 'pubkey is required and must be a non-empty string'
       });
+    }
+
+    if (!isValidSolanaAddress(pubkey)) {
+      return res.status(400).json({ error: 'Invalid Solana public key format' });
     }
 
     // 2. Check agent exists
@@ -58,6 +63,10 @@ router.post('/verify/response', authLimiter, async (req, res, next) => {
       return res.status(400).json({
         error: 'pubkey is required and must be a string'
       });
+    }
+
+    if (!isValidSolanaAddress(pubkey)) {
+      return res.status(400).json({ error: 'Invalid Solana public key format' });
     }
 
     if (!nonce || typeof nonce !== 'string') {

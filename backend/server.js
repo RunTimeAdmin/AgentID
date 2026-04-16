@@ -15,6 +15,7 @@ const helmet = require('helmet');
 const config = require('./src/config');
 const errorHandler = require('./src/middleware/errorHandler');
 const { defaultLimiter } = require('./src/middleware/rateLimit');
+const axios = require('axios');
 
 // Import route modules
 const registerRoutes = require('./src/routes/register');
@@ -78,6 +79,11 @@ if (require.main === module) {
     console.log(`🚀 AgentID API server running on port ${config.port}`);
     console.log(`📊 Environment: ${config.nodeEnv}`);
     console.log(`🏥 Health check: http://localhost:${config.port}/health`);
+
+    // Non-blocking SAID Gateway connectivity check
+    axios.get(`${config.saidGatewayUrl}/health`, { timeout: 5000 })
+      .then(() => console.log('SAID Gateway: connected'))
+      .catch(() => console.warn('SAID Gateway: unreachable (non-critical — SAID features will degrade gracefully)'));
   });
 }
 

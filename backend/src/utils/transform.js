@@ -79,10 +79,24 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+/**
+ * Validate Solana public key format
+ * @param {string} pubkey - Public key to validate
+ * @returns {boolean} - True if valid Solana address
+ */
+function isValidSolanaAddress(pubkey) {
+  try {
+    const bs58 = require('bs58');
+    const decoded = bs58.decode(pubkey);
+    return decoded.length === 32;
+  } catch { return false; }
+}
+
 module.exports = {
   toCamelCase,
   snakeToCamel,
   transformAgent,
   transformAgents,
-  escapeHtml
+  escapeHtml,
+  isValidSolanaAddress
 };

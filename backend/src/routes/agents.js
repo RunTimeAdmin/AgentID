@@ -9,7 +9,7 @@ const bs58 = require('bs58');
 const { getAgent, listAgents, countAgents, discoverAgents, updateAgent } = require('../models/queries');
 const { computeBagsScore } = require('../services/bagsReputation');
 const { defaultLimiter, authLimiter } = require('../middleware/rateLimit');
-const { transformAgent, transformAgents } = require('../utils/transform');
+const { transformAgent, transformAgents, isValidSolanaAddress } = require('../utils/transform');
 
 const router = express.Router();
 
@@ -61,6 +61,10 @@ router.get('/agents', defaultLimiter, async (req, res, next) => {
 router.get('/agents/:pubkey', defaultLimiter, async (req, res, next) => {
   try {
     const { pubkey } = req.params;
+
+    if (!isValidSolanaAddress(pubkey)) {
+      return res.status(400).json({ error: 'Invalid Solana public key format' });
+    }
 
     const agent = await getAgent(pubkey);
     if (!agent) {

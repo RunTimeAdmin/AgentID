@@ -8,7 +8,7 @@ const { verifyBagsSignature } = require('../services/bagsAuthVerifier');
 const { registerWithSAID } = require('../services/saidBinding');
 const { createAgent, getAgent } = require('../models/queries');
 const { authLimiter } = require('../middleware/rateLimit');
-const { transformAgent } = require('../utils/transform');
+const { transformAgent, isValidSolanaAddress } = require('../utils/transform');
 
 const router = express.Router();
 
@@ -64,6 +64,12 @@ router.post('/register', authLimiter, async (req, res, next) => {
       return res.status(validationError.status).json({
         error: validationError.error
       });
+    }
+
+    const { pubkey } = req.body;
+
+    if (!isValidSolanaAddress(pubkey)) {
+      return res.status(400).json({ error: 'Invalid Solana public key format' });
     }
 
     const {
