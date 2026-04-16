@@ -1,0 +1,102 @@
+/**
+ * Widget Routes
+ * Returns embeddable HTML widget for agents
+ */
+
+const express = require('express');
+const { getWidgetHTML } = require('../services/badgeBuilder');
+const { getAgent } = require('../models/queries');
+const { defaultLimiter } = require('../middleware/rateLimit');
+
+const router = express.Router();
+
+/**
+ * Escape HTML special characters to prevent XSS
+ * @param {string} text - Input text
+ * @returns {string} - Escaped text
+ */
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * GET /widget/:pubkey
+ * Returns embeddable HTML widget
+ */
+router.get('/widget/:pubkey', defaultLimiter, async (req, res, next) => {
+  try {
+    const { pubkey } = req.params;
+
+    // Check agent exists
+    const agent = await getAgent(pubkey);
+    if (!agent) {
+      // Return simple error HTML page
+      res.setHeader('Content-Type', 'text/html');
+      return res.status(404).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Not Found</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .error-container {
+      text-align: center;
+      padding: 40px;
+    }
+    .error-code {
+      font-size: 72px;
+      font-weight: 700;
+      color: #ef4444;
+      margin-bottom: 16px;
+    }
+    .error-message {
+      font-size: 18px;
+      color: #888;
+    }
+    .pubkey {
+      font-family: monospace;
+      background: #1a1a1a;
+      padding: 8px 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+      display: inline-block;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-container">
+    <div class="error-code">404</div>
+    <div class="error-message">Agent not found</div>
+    <div class="pubkey">${escapeHtml(pubkey)}</div>
+  </div>
+</body>
+</html>`);
+    }
+
+    const html = await getWidgetHTML(pubkey);
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(html);
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;

@@ -1,0 +1,187 @@
+/**
+ * Attestation Routes
+ * Handles action attestations and flagging of suspicious behavior
+ */
+
+const express = require('express');
+const {
+  getAgent,
+  incrementActions,
+  createFlag,
+  getFlags,
+  getUnresolvedFlagCount,
+  updateAgentStatus
+} = require('../models/queries');
+const { refreshAndStoreScore } = require('../services/bagsReputation');
+const { defaultLimiter } = require('../middleware/rateLimit');
+const { transformAgent } = require('../utils/transform');
+
+const router = express.Router();
+
+/**
+ * POST /agents/:pubkey/attest
+ * Record a successful/failed action
+ */
+router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => {
+  try {
+    const { pubkey } = req.params;
+    const { success, action } = req.body;
+
+    // Validate success is boolean
+    if (typeof success !== 'boolean') {
+      return res.status(400).json({
+        error: 'success is required and must be a boolean'
+      });
+    }
+
+    // Check agent exists
+    const agent = await getAgent(pubkey);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        pubkey
+      });
+    }
+
+    // Increment action counters
+    const updatedAgent = await incrementActions(pubkey, success);
+
+    // If success, refresh and store the BAGS score
+    if (success) {
+      try {
+        await refreshAndStoreScore(pubkey);
+      } catch (scoreError) {
+        // Log but don't fail the request
+        console.warn('Failed to refresh score after successful action:', scoreError.message);
+      }
+    }
+
+    const transformedAgent = transformAgent(updatedAgent);
+    return res.status(200).json({
+      pubkey,
+      success,
+      action: action || null,
+      totalActions: transformedAgent.totalActions,
+      successfulActions: transformedAgent.successfulActions,
+      failedActions: transformedAgent.failedActions,
+      bagsScore: transformedAgent.bagsScore
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /agents/:pubkey/flag
+ * Flag suspicious behavior
+ */
+router.post('/agents/:pubkey/flag', defaultLimiter, async (req, res, next) => {
+  try {
+    const { pubkey } = req.params;
+    const { reporterPubkey, reason, evidence } = req.body;
+
+    // Validate required fields
+    if (!reporterPubkey || typeof reporterPubkey !== 'string') {
+      return res.status(400).json({
+        error: 'reporterPubkey is required and must be a string'
+      });
+    }
+
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+      return res.status(400).json({
+        error: 'reason is required and must be a non-empty string'
+      });
+    }
+
+    // Check agent exists
+    const agent = await getAgent(pubkey);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        pubkey
+      });
+    }
+
+    // Create the flag
+    const flag = await createFlag({
+      pubkey,
+      reporterPubkey,
+      reason,
+      evidence: evidence || null
+    });
+
+    // Check if unresolved flags >= 3, auto-update status to 'flagged'
+    const unresolvedCount = await getUnresolvedFlagCount(pubkey);
+    if (unresolvedCount >= 3 && agent.status !== 'flagged') {
+      await updateAgentStatus(pubkey, 'flagged', `Auto-flagged: ${unresolvedCount} unresolved flags`);
+    }
+
+    return res.status(201).json({
+      flag,
+      unresolved_flags: unresolvedCount,
+      auto_flagged: unresolvedCount >= 3 && agent.status !== 'flagged'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /agents/:pubkey/attestations
+ * Return agent action stats
+ */
+router.get('/agents/:pubkey/attestations', defaultLimiter, async (req, res, next) => {
+  try {
+    const { pubkey } = req.params;
+
+    const agent = await getAgent(pubkey);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        pubkey
+      });
+    }
+
+    const transformedAgent = transformAgent(agent);
+    return res.status(200).json({
+      pubkey,
+      totalActions: transformedAgent.totalActions,
+      successfulActions: transformedAgent.successfulActions,
+      failedActions: transformedAgent.failedActions,
+      bagsScore: transformedAgent.bagsScore
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /agents/:pubkey/flags
+ * Return flags for an agent
+ */
+router.get('/agents/:pubkey/flags', defaultLimiter, async (req, res, next) => {
+  try {
+    const { pubkey } = req.params;
+
+    // Check agent exists
+    const agent = await getAgent(pubkey);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        pubkey
+      });
+    }
+
+    const flags = await getFlags(pubkey);
+
+    return res.status(200).json({
+      pubkey,
+      flags,
+      count: flags.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+module.exports = router;
