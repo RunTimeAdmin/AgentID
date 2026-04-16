@@ -22,6 +22,13 @@
 - [backend/src/routes/register.js](file://backend/src/routes/register.js)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated all domain references from `your-domain.io` to `agentid.provenanceai.network` in widget examples
+- Corrected inconsistent SSL certificate domain references in Nginx configuration examples
+- Standardized domain usage across all deployment and API documentation
+- Fixed mixed domain references in README and deployment guides
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -332,8 +339,6 @@ Score --> SVG
 Score --> Widget
 ```
 
-[No sources needed since this diagram shows conceptual workflow, not actual code structure]
-
 ## Dependency Analysis
 - External dependencies: Express, tweetnacl, bs58, pg, ioredis, axios, helmet, cors, express-rate-limit
 - Internal dependencies:
@@ -369,8 +374,6 @@ Services --> Ext["External APIs"]
 - External calls: SAID and Bags calls are retried with timeouts; failures degrade gracefully
 - Rate limiting: Protects endpoints from abuse
 - Recommendations: Increase cache TTL for production, monitor Redis and DB latency, and consider connection pooling tuning
-
-[No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -420,3 +423,79 @@ AgentID provides a robust trust layer for Bags agents on Solana, integrating aut
 
 **Section sources**
 - [DEVELOPER_GUIDE.md:128-164](file://docs/DEVELOPER_GUIDE.md#L128-L164)
+
+### Domain Migration and Deployment
+
+**Updated** The AgentID service now operates under the domain `agentid.provenanceai.network`. All deployment configurations, SSL certificates, and API endpoints have been updated to reflect this migration.
+
+#### Nginx Configuration
+The Nginx configuration has been updated to use the new domain throughout:
+
+```nginx
+server {
+    listen 80;
+    server_name agentid.provenanceai.network;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name agentid.provenanceai.network;
+
+    ssl_certificate /etc/letsencrypt/live/agentid.provenanceai.network/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/agentid.provenanceai.network/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+#### SSL Certificate Management
+Certificates are now managed through Certbot for the domain `agentid.provenanceai.network`:
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Obtain certificate
+sudo certbot --nginx -d agentid.provenanceai.network
+
+# Auto-renewal test
+sudo certbot renew --dry-run
+```
+
+#### Widget Embed Examples
+All widget embed examples have been updated to use the new domain:
+
+```html
+<iframe 
+  src="https://agentid.provenanceai.network/widget/AGENT_PUBKEY"
+  width="320" height="80" frameborder="0">
+</iframe>
+```
+
+#### API Base URLs
+The API base URL has been standardized to use the new domain:
+
+- **Production**: `https://agentid.provenanceai.network/api`
+- **Development**: `http://localhost:3002/api`
+
+**Section sources**
+- [DEVELOPER_GUIDE.md:675-726](file://docs/DEVELOPER_GUIDE.md#L675-L726)
+- [DEVELOPER_GUIDE.md:128-174](file://docs/DEVELOPER_GUIDE.md#L128-L174)
+- [README.md:70-104](file://README.md#L70-L104)
+- [API_REFERENCE.md:3-5](file://docs/API_REFERENCE.md#L3-L5)
+- [Backend-API-Reference.md:27-29](file://AgentID-wiki-temp/Backend-API-Reference.md#L27-L29)
+- [Widget-Guide.md:33-35](file://AgentID-wiki-temp/Widget-Guide.md#L33-L35)
+- [Widget-Guide.md:51-53](file://AgentID-wiki-temp/Widget-Guide.md#L51-L53)
+- [Widget-Guide.md:65-68](file://AgentID-wiki-temp/Widget-Guide.md#L65-L68)
+- [Configuration-Management.md:34](file://AgentID-wiki-temp/Configuration-Management.md#L34)

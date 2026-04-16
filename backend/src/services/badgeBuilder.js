@@ -7,7 +7,7 @@ const queries = require('../models/queries');
 const { computeBagsScore } = require('./bagsReputation');
 const { getCache, setCache } = require('../models/redis');
 const config = require('../config');
-const { escapeHtml } = require('../utils/transform');
+const { escapeHtml, escapeXml } = require('../utils/transform');
 
 /**
  * Get badge data as JSON with caching
@@ -541,21 +541,6 @@ async function getWidgetHTML(pubkey) {
   } catch (error) {
     throw new Error(`Failed to generate widget HTML: ${error.message}`);
   }
-}
-
-/**
- * Escape XML special characters
- * @param {string} text - Input text
- * @returns {string} - Escaped text
- */
-function escapeXml(text) {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
 }
 
 module.exports = {

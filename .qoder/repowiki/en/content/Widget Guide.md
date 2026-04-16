@@ -15,7 +15,16 @@
 - [transform.js](file://backend/src/utils/transform.js)
 - [bagsReputation.js](file://backend/src/services/bagsReputation.js)
 - [widget.html](file://frontend/widget.html)
+- [README.md](file://README.md)
+- [API_REFERENCE.md](file://docs/API_REFERENCE.md)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated all domain references from `your-domain.io` to `agentid.provenanceai.network` in widget embedding examples
+- Corrected the agent ID base URL configuration reference in the badge builder service
+- Updated troubleshooting section to reflect the new production domain
+- Enhanced security considerations with the new domain context
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -35,6 +44,8 @@ This guide explains how to integrate and customize the AgentID Widget, a visual 
 - Direct SVG badge for documentation and README files
 
 Key features include automatic 60-second refresh, responsive design, and zero external dependencies for the iframe version.
+
+**Updated** Domain has been migrated from `your-domain.io` to `agentid.provenanceai.network` for production deployments.
 
 ## Project Structure
 The widget spans both frontend and backend components:
@@ -254,6 +265,8 @@ BadgeBuilder --> DatabaseQueries : "uses"
 - Port, CORS origin, cache TTL, and verified threshold are configured via environment variables
 - Agent base URL is used to construct widget URLs in generated HTML
 
+**Updated** The agent base URL configuration now uses `agentIdBaseUrl` which defaults to the production domain `agentid.provenanceai.network`.
+
 **Section sources**
 - [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [badgeBuilder.js:59](file://backend/src/services/badgeBuilder.js#L59)
@@ -302,8 +315,6 @@ BE_Builder --> BE_Config["config/index.js"]
 - Lazy loading: For iframe embeds, use the native lazy loading attribute to defer rendering until visible.
 - Minimizing payload: Prefer SVG badges for lightweight static displays in documentation.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 Common issues and resolutions:
 - CORS errors: Ensure the frontend origin is included in the CORS configuration.
@@ -313,6 +324,8 @@ Common issues and resolutions:
 - Rate limiting: Default limits apply; implement client-side caching and avoid excessive polling.
 - Styling conflicts: Use the seamless attribute or reset inherited styles in the container.
 
+**Updated** Domain migration affects CORS configuration and widget URLs. Ensure your CORS_ORIGIN includes the new domain `agentid.provenanceai.network` and update any hardcoded widget URLs to use the new domain.
+
 **Section sources**
 - [WIDGET_GUIDE.md:396-474](file://docs/WIDGET_GUIDE.md#L396-L474)
 - [index.js:22-27](file://backend/src/config/index.js#L22-L27)
@@ -320,3 +333,5 @@ Common issues and resolutions:
 
 ## Conclusion
 The AgentID Widget provides a flexible, secure, and performant way to display agent trust indicators. Choose the iframe embed for simplicity, self-hosted React for customization, or SVG for static documentation. Leverage caching, auto-refresh, and proper error handling to ensure a smooth user experience.
+
+**Updated** The domain migration to `agentid.provenanceai.network` ensures production-ready deployment with proper SSL certificates and DNS configuration. All widget integrations should now use the new domain for reliable access to trust badges and reputation data.

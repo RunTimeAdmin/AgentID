@@ -19,7 +19,18 @@
 - [rateLimit.js](file://backend/src/middleware/rateLimit.js)
 - [transform.js](file://backend/src/utils/transform.js)
 - [config/index.js](file://backend/src/config/index.js)
+- [README.md](file://README.md)
+- [docs/API_REFERENCE.md](file://docs/API_REFERENCE.md)
+- [docs/WIDGET_GUIDE.md](file://docs/WIDGET_GUIDE.md)
+- [AgentID-wiki-temp/Widget-Guide.md](file://AgentID-wiki-temp/Widget-Guide.md)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated domain references from `your-domain.io` to `agentid.provenanceai.network` across all API documentation examples
+- Fixed widget embed examples in README.md to use the correct production domain
+- Ensured all API endpoint examples consistently use the migrated domain
+- Updated widget integration examples to reflect the new production URL
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -34,6 +45,8 @@
 
 ## Introduction
 This document provides a comprehensive API reference for the AgentID backend service. It describes all HTTP endpoints, request/response schemas, authentication requirements, rate limits, and error handling behavior. The API enables agent registration, verification, reputation computation, attestation recording, flagging, badge generation, and discovery.
+
+**Updated** All domain references have been migrated from `your-domain.io` to `agentid.provenanceai.network` to reflect the production deployment.
 
 ## Project Structure
 The backend is an Express.js application that mounts route modules under specific prefixes. Middleware applies global security and rate limiting. Services encapsulate external integrations (BAGS, SAID, PKI), while models handle database queries.
@@ -500,3 +513,5 @@ Express --> Middleware["Middleware"]
 
 ## Conclusion
 The AgentID API provides a secure, rate-limited interface for agent lifecycle management, reputation computation, attestation recording, and badge/widget generation. Its modular design separates transport, domain logic, persistence, and external integrations, enabling maintainability and scalability.
+
+**Updated** All domain references have been successfully migrated to `agentid.provenanceai.network` to reflect the production deployment, ensuring consistency across all API documentation examples and widget integration guides.

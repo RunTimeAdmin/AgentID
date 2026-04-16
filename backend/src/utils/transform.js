@@ -80,6 +80,21 @@ function escapeHtml(text) {
 }
 
 /**
+ * Escape XML special characters
+ * @param {string} str - Input text
+ * @returns {string} - Escaped text
+ */
+function escapeXml(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
  * Validate Solana public key format
  * @param {string} pubkey - Public key to validate
  * @returns {boolean} - True if valid Solana address
@@ -98,5 +113,6 @@ module.exports = {
   transformAgent,
   transformAgents,
   escapeHtml,
+  escapeXml,
   isValidSolanaAddress
 };
