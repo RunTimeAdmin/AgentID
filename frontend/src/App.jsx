@@ -4,6 +4,7 @@ import Registry from './pages/Registry';
 import AgentDetail from './pages/AgentDetail';
 import Register from './pages/Register';
 import Discover from './pages/Discover';
+import Demo from './pages/Demo';
 
 function Navigation() {
   const location = useLocation();
@@ -33,6 +34,12 @@ function Navigation() {
             <NavLink to="/" active={isActive('/')}>Registry</NavLink>
             <NavLink to="/discover" active={isActive('/discover')}>Discover</NavLink>
             <NavLink to="/register" active={isActive('/register')}>Register</NavLink>
+            <DemoNavLink to="/demo" active={isActive('/demo')}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+              Try Demo
+            </DemoNavLink>
           </div>
 
           {/* Mobile menu button */}
@@ -60,6 +67,12 @@ function Navigation() {
               <MobileNavLink to="/" active={isActive('/')} onClick={handleNavClick}>Registry</MobileNavLink>
               <MobileNavLink to="/discover" active={isActive('/discover')} onClick={handleNavClick}>Discover</MobileNavLink>
               <MobileNavLink to="/register" active={isActive('/register')} onClick={handleNavClick}>Register</MobileNavLink>
+              <MobileDemoNavLink to="/demo" active={isActive('/demo')} onClick={handleNavClick}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Try Demo
+              </MobileDemoNavLink>
             </div>
           </div>
         )}
@@ -83,6 +96,21 @@ function NavLink({ to, active, children }) {
   );
 }
 
+function DemoNavLink({ to, active, children }) {
+  return (
+    <Link
+      to={to}
+      className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+        active
+          ? 'text-white bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-purple)]'
+          : 'text-white bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-purple)] hover:shadow-lg hover:shadow-[var(--accent-cyan)]/25'
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function MobileNavLink({ to, active, onClick, children }) {
   return (
     <Link
@@ -92,6 +120,22 @@ function MobileNavLink({ to, active, onClick, children }) {
         active
           ? 'text-[var(--accent-cyan)] bg-[var(--accent-cyan)]/10'
           : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MobileDemoNavLink({ to, active, onClick, children }) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+        active
+          ? 'text-white bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-purple)]'
+          : 'text-white bg-gradient-to-r from-[var(--accent-cyan)] to-[var(--accent-purple)]'
       }`}
     >
       {children}
@@ -136,6 +180,7 @@ function App() {
             <Route path="/agents/:pubkey" element={<AgentDetail />} />
             <Route path="/register" element={<Register />} />
             <Route path="/discover" element={<Discover />} />
+            <Route path="/demo" element={<Demo />} />
           </Routes>
         </main>
         <Footer />

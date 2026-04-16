@@ -309,6 +309,8 @@ export default function AgentDetail() {
               status={agent.status}
               name={agent.name}
               score={badge?.bagsScore ?? badge?.bags_score}
+              tier={badge?.tier}
+              tierColor={badge?.tierColor}
               className="w-full lg:w-80"
             />
           </div>
@@ -322,9 +324,13 @@ export default function AgentDetail() {
               }`}>
                 {agent.status}
               </span>
-              {badge?.tier && (
-                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-[var(--accent-cyan)]/20 to-[var(--accent-purple)]/20 text-[var(--accent-cyan)] border border-[var(--accent-cyan)]/30">
-                  {badge.tier} Tier
+              {badge?.tier && agent.status === 'verified' && (
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                  badge.tier === 'verified' 
+                    ? 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-400 border-yellow-500/50 shadow-[0_0_15px_rgba(255,215,0,0.2)]'
+                    : 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/50'
+                }`}>
+                  {badge.tier === 'verified' ? '★ VERIFIED' : 'TRUSTED'} TIER
                 </span>
               )}
             </div>

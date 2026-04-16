@@ -15,6 +15,14 @@
 - [agentid_build_plan.md](file://agentid_build_plan.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated environment variable validation section to reflect new mandatory configuration requirements
+- Added new section on environment variable validation and startup behavior
+- Updated troubleshooting guide to include validation failure scenarios
+- Enhanced security considerations to emphasize mandatory variable requirements
+- Updated configuration validation approaches to include startup validation patterns
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -28,7 +36,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the configuration management system for the AgentID project, focusing on centralized environment configuration, service settings, and frontend build configuration. It explains how environment variables are used to control external integrations (Bags API and SAID Protocol gateway), database and Redis connectivity, CORS, and cache behavior. It also covers development versus production differences, security considerations for sensitive configuration, validation approaches, and practical deployment examples for local, containerized, and cloud environments.
+This document describes the configuration management system for the AgentID project, focusing on centralized environment configuration, service settings, and frontend build configuration. It explains how environment variables are used to control external integrations (Bags API and SAID Protocol gateway), database and Redis connectivity, CORS, and cache behavior. The system now enforces mandatory configuration validation at startup, requiring critical variables like DATABASE_URL, BAGS_API_KEY, and REDIS_URL to be present. It covers development versus production differences, security considerations for sensitive configuration, validation approaches, and practical deployment examples for local, containerized, and cloud environments.
 
 ## Project Structure
 The configuration system spans three primary areas:
@@ -56,18 +64,18 @@ Vite --> Server
 ```
 
 **Diagram sources**
-- [backend/src/config/index.js:1-30](file://backend/src/config/index.js#L1-L30)
-- [backend/server.js:1-76](file://backend/server.js#L1-L76)
-- [backend/src/models/db.js:1-45](file://backend/src/models/db.js#L1-L45)
+- [backend/src/config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
+- [backend/server.js:1-104](file://backend/server.js#L1-L104)
+- [backend/src/models/db.js:1-71](file://backend/src/models/db.js#L1-L71)
 - [backend/src/models/redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
 - [backend/src/models/migrate.js:1-99](file://backend/src/models/migrate.js#L1-L99)
-- [backend/src/services/bagsAuthVerifier.js:1-87](file://backend/src/services/bagsAuthVerifier.js#L1-L87)
+- [backend/src/services/bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
 - [backend/src/services/saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
 - [frontend/vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 
 **Section sources**
-- [backend/src/config/index.js:1-30](file://backend/src/config/index.js#L1-L30)
-- [backend/server.js:1-76](file://backend/server.js#L1-L76)
+- [backend/src/config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
+- [backend/server.js:1-104](file://backend/server.js#L1-L104)
 - [frontend/vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 
 ## Core Components
@@ -79,24 +87,28 @@ Centralized environment configuration is defined in a single module and consumed
 - CORS origin for the frontend domain
 - Cache and expiry settings: badge cache TTL and challenge expiry
 
-These values are read from environment variables with sensible defaults, enabling quick setup in development while allowing overrides in production.
+These values are read from environment variables with sensible defaults, enabling quick setup in development while allowing overrides in production. **Critical variables (DATABASE_URL, BAGS_API_KEY, REDIS_URL) are now mandatory and will cause the server to fail fast if missing.**
 
 **Section sources**
-- [backend/src/config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
+- [backend/src/config/index.js:6-28](file://backend/src/config/index.js#L6-L28)
 
 ## Architecture Overview
-The configuration architecture ensures that all runtime behavior is controlled by environment variables. The server loads configuration, applies security middleware, and mounts routes. Services use configuration to call external APIs and manage timeouts. Models use configuration to connect to PostgreSQL and Redis. The frontend Vite configuration proxies API requests to the backend during development and defines build targets for both the main app and the widget.
+The configuration architecture ensures that all runtime behavior is controlled by environment variables. The server performs mandatory validation at startup, ensuring critical dependencies are present before accepting requests. Services use configuration to call external APIs and manage timeouts. Models use configuration to connect to PostgreSQL and Redis. The frontend Vite configuration proxies API requests to the backend during development and defines build targets for both the main app and the widget.
 
 ```mermaid
 sequenceDiagram
 participant Env as "Environment Variables"
+participant Validator as "Startup Validator"
 participant Cfg as "Config Module"
 participant Srv as "Server"
 participant DB as "Database Pool"
 participant RDS as "Redis Client"
 participant Bags as "Bags Service"
 participant Said as "SAID Service"
-Env-->>Cfg : "Load variables"
+Env-->>Validator : "Load variables"
+Validator->>Validator : "Check required variables"
+Validator-->>Srv : "Fail if missing required vars"
+Validator-->>Cfg : "Proceed if valid"
 Cfg-->>Srv : "Expose settings"
 Cfg-->>DB : "Provide DATABASE_URL"
 Cfg-->>RDS : "Provide REDIS_URL"
@@ -109,7 +121,8 @@ Said->>Said : "Call SAID Gateway endpoints"
 ```
 
 **Diagram sources**
-- [backend/src/config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
+- [backend/src/config/index.js:6-28](file://backend/src/config/index.js#L6-L28)
+- [backend/server.js:3-23](file://backend/server.js#L3-L23)
 - [backend/server.js:19-64](file://backend/server.js#L19-L64)
 - [backend/src/models/db.js:10-18](file://backend/src/models/db.js#L10-L18)
 - [backend/src/models/redis.js:10-20](file://backend/src/models/redis.js#L10-L20)
@@ -117,6 +130,34 @@ Said->>Said : "Call SAID Gateway endpoints"
 - [backend/src/services/saidBinding.js:21-54](file://backend/src/services/saidBinding.js#L21-L54)
 
 ## Detailed Component Analysis
+
+### Enhanced Environment Variable Validation and Startup Behavior
+The server now performs comprehensive validation at startup to ensure critical configuration is present. **Three variables are now mandatory: DATABASE_URL, BAGS_API_KEY, and REDIS_URL.** The validation process:
+
+1. **Mandatory Variables Check**: Server exits immediately if any required variables are missing
+2. **Recommended Variables Check**: Server warns but continues if optional variables are missing
+3. **Graceful Degradation**: Services continue operating even if some external dependencies are unavailable
+
+```mermaid
+flowchart TD
+Start(["Server Startup"]) --> LoadEnv["Load environment variables"]
+LoadEnv --> CheckRequired["Check required variables:<br/>DATABASE_URL, BAGS_API_KEY, REDIS_URL"]
+CheckRequired --> HasMissing{"Any missing?"}
+HasMissing --> |Yes| FatalError["Print fatal error<br/>Exit process"]
+HasMissing --> |No| CheckRecommended["Check recommended variables:<br/>CORS_ORIGIN, AGENTID_BASE_URL"]
+CheckRecommended --> WarnMissing{"Any missing?"}
+WarnMissing --> |Yes| WarnUser["Log warnings<br/>Continue startup"]
+WarnMissing --> |No| Proceed["Proceed with normal startup"]
+FatalError --> End(["Process terminated"])
+WarnUser --> End2(["Startup complete"])
+Proceed --> End3(["Startup complete"])
+```
+
+**Diagram sources**
+- [backend/server.js:3-23](file://backend/server.js#L3-L23)
+
+**Section sources**
+- [backend/server.js:3-23](file://backend/server.js#L3-L23)
 
 ### Backend Configuration Module
 The configuration module reads environment variables and provides defaults for:
@@ -126,7 +167,7 @@ The configuration module reads environment variables and provides defaults for:
 - CORS origin
 - Cache TTL and challenge expiry
 
-It is imported by the server, database pool, Redis client, and services to ensure consistent behavior across the application.
+**Important**: While the configuration module still provides defaults, the server startup validation enforces that critical variables are present in production environments. The configuration module serves as a fallback for development and testing scenarios.
 
 ```mermaid
 flowchart TD
@@ -143,13 +184,13 @@ ReadExpiry --> Export["Export config object"]
 ```
 
 **Diagram sources**
-- [backend/src/config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
+- [backend/src/config/index.js:6-28](file://backend/src/config/index.js#L6-L28)
 
 **Section sources**
-- [backend/src/config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
+- [backend/src/config/index.js:6-28](file://backend/src/config/index.js#L6-L28)
 
 ### Database Configuration and SSL Behavior
-The database pool is created using the configuration’s database URL. In production mode, SSL is enabled with a disabled certificate verification setting to accommodate various hosting environments. Queries are wrapped with error logging and rethrown to prevent silent failures.
+The database pool is created using the configuration's database URL. In production mode, SSL is enabled with a disabled certificate verification setting to accommodate various hosting environments. Queries are wrapped with error logging and rethrown to prevent silent failures.
 
 ```mermaid
 sequenceDiagram
@@ -251,14 +292,7 @@ ViteCfg --> BuildInputs["Build Inputs: main, widget"]
 - [frontend/vite.config.js:5-41](file://frontend/vite.config.js#L5-L41)
 
 ### Environment Variables and Defaults
-The authoritative list of environment variables and defaults is defined in the build plan. These include:
-- Server: PORT, NODE_ENV
-- Bags API: BAGS_API_KEY
-- SAID Protocol: SAID_GATEWAY_URL
-- Database: DATABASE_URL
-- Redis: REDIS_URL
-- CORS: CORS_ORIGIN
-- Cache and expiry: BADGE_CACHE_TTL, CHALLENGE_EXPIRY_SECONDS
+The authoritative list of environment variables and defaults is defined in the build plan. **Critical variables (DATABASE_URL, BAGS_API_KEY, REDIS_URL) are now mandatory and will cause server startup to fail if missing.** Recommended variables (CORS_ORIGIN, AGENTID_BASE_URL) are validated but allow graceful startup if absent.
 
 **Section sources**
 - [agentid_build_plan.md:309-329](file://agentid_build_plan.md#L309-L329)
@@ -281,7 +315,7 @@ Vite["Vite"] --> Srv
 ```
 
 **Diagram sources**
-- [backend/src/config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
+- [backend/src/config/index.js:6-28](file://backend/src/config/index.js#L6-L28)
 - [backend/server.js:19-64](file://backend/server.js#L19-L64)
 - [backend/src/models/db.js:10-18](file://backend/src/models/db.js#L10-L18)
 - [backend/src/models/redis.js:10-20](file://backend/src/models/redis.js#L10-L20)
@@ -290,7 +324,7 @@ Vite["Vite"] --> Srv
 - [frontend/vite.config.js:33-39](file://frontend/vite.config.js#L33-L39)
 
 **Section sources**
-- [backend/src/config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
+- [backend/src/config/index.js:6-28](file://backend/src/config/index.js#L6-L28)
 - [backend/server.js:19-64](file://backend/server.js#L19-L64)
 - [backend/src/models/db.js:10-18](file://backend/src/models/db.js#L10-L18)
 - [backend/src/models/redis.js:10-20](file://backend/src/models/redis.js#L10-L20)
@@ -303,14 +337,45 @@ Vite["Vite"] --> Srv
 - Redis retry strategy and offline queue improve resilience under transient failures; monitor reconnect logs to detect persistent issues.
 - Cache TTL for badges balances freshness and load reduction; adjust based on observed traffic patterns.
 - Challenge expiry prevents replay attacks and limits stale nonce usage; ensure clients handle expiration gracefully.
+- **Startup validation adds minimal overhead but prevents wasted resources on misconfigured deployments.**
 
 ## Troubleshooting Guide
 Common configuration-related issues and resolutions:
-- CORS errors: Verify CORS_ORIGIN matches the frontend origin used in development and production.
-- Database connection failures: Confirm DATABASE_URL format and credentials; in production, SSL is enabled automatically.
-- Redis unavailability: Check REDIS_URL and network connectivity; note that Redis is treated as a cache and the system continues operating without it.
-- External API timeouts: Ensure BAGS_API_KEY is valid and reachable; timeouts are applied to external calls.
-- Migration failures: Run the migration script to create required tables and indexes.
+
+### Startup Validation Failures
+**Critical Variables Missing**: Server exits immediately with fatal error
+- **Symptom**: Process terminates with "FATAL: Missing required environment variables"
+- **Solution**: Set DATABASE_URL, BAGS_API_KEY, and REDIS_URL in environment
+- **Prevention**: Use `.env` file or platform environment variables
+
+**Recommended Variables Missing**: Server starts but logs warnings
+- **Symptom**: Warning messages about missing CORS_ORIGIN or AGENTID_BASE_URL
+- **Solution**: Set optional variables for production deployment
+- **Impact**: System continues operating with default values
+
+### CORS Errors
+- **Cause**: CORS_ORIGIN not matching frontend origin
+- **Solution**: Set CORS_ORIGIN to match frontend domain
+- **Development**: Default to localhost:5173
+
+### Database Connection Failures
+- **Cause**: Invalid DATABASE_URL format or credentials
+- **Solution**: Verify connection string format and database accessibility
+- **Production**: SSL is enabled automatically
+
+### Redis Unavailability
+- **Cause**: Invalid REDIS_URL or network connectivity
+- **Impact**: Cache operations fail but system continues
+- **Resolution**: Fix connection URL and network access
+
+### External API Timeouts
+- **Cause**: Invalid BAGS_API_KEY or network issues
+- **Solution**: Verify API key validity and network connectivity
+- **Timeouts**: Applied to external calls to prevent hanging
+
+### Migration Failures
+- **Cause**: Database schema issues or permissions
+- **Solution**: Run migration script to create required tables and indexes
 
 **Section sources**
 - [backend/src/models/db.js:10-18](file://backend/src/models/db.js#L10-L18)
@@ -319,28 +384,23 @@ Common configuration-related issues and resolutions:
 - [backend/src/models/migrate.js:66-91](file://backend/src/models/migrate.js#L66-L91)
 
 ## Conclusion
-The AgentID configuration system is intentionally simple and centralized. Environment variables control all runtime behavior, enabling consistent deployments across environments. By keeping secrets out of source and validating configuration in services, the system remains secure and maintainable. The frontend Vite configuration supports efficient development workflows and predictable production builds.
+The AgentID configuration system is intentionally simple and centralized with enhanced validation. **Critical environment variables are now mandatory**, preventing misconfigured deployments from reaching production. Environment variables control all runtime behavior, enabling consistent deployments across environments. By keeping secrets out of source and validating configuration at startup, the system remains secure and maintainable. The frontend Vite configuration supports efficient development workflows and predictable production builds.
 
 ## Appendices
 
 ### Environment Variable Reference
-- PORT: Server port (default: 3002)
-- NODE_ENV: Environment mode (default: development)
-- BAGS_API_KEY: Authorization key for Bags API
-- SAID_GATEWAY_URL: Base URL for SAID Protocol gateway
-- DATABASE_URL: PostgreSQL connection string
-- REDIS_URL: Redis connection URL
-- CORS_ORIGIN: Allowed origin for CORS
-- BADGE_CACHE_TTL: Badge cache TTL in seconds
-- CHALLENGE_EXPIRY_SECONDS: Challenge expiry in seconds
+- **Mandatory (Critical)**: DATABASE_URL, BAGS_API_KEY, REDIS_URL
+- **Recommended**: CORS_ORIGIN, AGENTID_BASE_URL
+- **Optional**: PORT, NODE_ENV, SAID_GATEWAY_URL, BADGE_CACHE_TTL, CHALLENGE_EXPIRY_SECONDS
 
 **Section sources**
 - [agentid_build_plan.md:309-329](file://agentid_build_plan.md#L309-L329)
 
 ### Development vs Production Differences
-- Database SSL: Enabled in production mode to enforce encrypted connections.
-- CORS origin: Defaults differ between development and production origins.
-- Node environment: Controls logging verbosity and security middleware behavior.
+- **Database SSL**: Enabled in production mode to enforce encrypted connections
+- **CORS Origin**: Defaults differ between development and production origins
+- **Node Environment**: Controls logging verbosity and security middleware behavior
+- **Validation**: Production requires all mandatory variables, development allows defaults
 
 **Section sources**
 - [backend/src/models/db.js:13-17](file://backend/src/models/db.js#L13-L17)
@@ -348,20 +408,22 @@ The AgentID configuration system is intentionally simple and centralized. Enviro
 - [backend/server.js:21-28](file://backend/server.js#L21-L28)
 
 ### Security Considerations
-- Keep secrets out of version control; use environment variables or secret managers.
-- Validate and sanitize environment variables at startup if adding strict checks.
-- Limit exposure of internal endpoints and rely on HTTPS in production.
-- Treat Redis as non-critical; ensure application logic does not fail when cache is unavailable.
+- **Mandatory Variables**: Critical variables must be provided to prevent misconfiguration
+- **Secrets Management**: Keep secrets out of version control; use environment variables or secret managers
+- **Startup Validation**: Early detection of configuration issues prevents running with invalid settings
+- **Graceful Degradation**: Non-critical services continue operating if external dependencies fail
+- **Redis as Cache**: Treat Redis as non-critical; application logic should not fail when cache is unavailable
 
 ### Configuration Validation Approaches
-- At startup, log effective configuration values and environment mode.
-- Add early validation to ensure required variables are present (e.g., API keys, URLs).
-- Use typed parsing for numeric values (e.g., ports, TTLs) and apply bounds checking.
+- **Startup Validation**: Log effective configuration values and environment mode
+- **Early Validation**: Ensure required variables are present before accepting requests
+- **Typed Parsing**: Use parseInt for numeric values (ports, TTLs) with bounds checking
+- **Graceful Warning**: Log warnings for recommended variables without failing startup
 
 ### Frontend Build Configuration Notes
-- Development proxy targets the backend port for seamless API calls.
-- Build inputs include both the main app and the widget entry for standalone embedding.
-- Widget middleware rewrites widget routes to the widget entry during development.
+- **Development Proxy**: Targets backend port for seamless API calls
+- **Build Inputs**: Include both main app and widget entry for standalone embedding
+- **Widget Middleware**: Rewrites widget routes to widget entry during development
 
 **Section sources**
 - [frontend/vite.config.js:33-39](file://frontend/vite.config.js#L33-L39)
@@ -369,8 +431,14 @@ The AgentID configuration system is intentionally simple and centralized. Enviro
 - [frontend/vite.config.js:10-21](file://frontend/vite.config.js#L10-L21)
 
 ### Deployment Scenarios and Examples
-- Local development: Start backend and frontend; Vite proxies API requests to the backend.
-- Containerization: Expose backend port, set environment variables, and mount volumes for static assets if needed.
-- Cloud platforms: Set environment variables in platform configuration; ensure database and Redis endpoints are reachable; configure SSL for database connections in production.
+- **Local Development**: Start backend and frontend; Vite proxies API requests to the backend
+- **Containerization**: Expose backend port, set environment variables, and mount volumes for static assets if needed
+- **Cloud Platforms**: Set environment variables in platform configuration; ensure database and Redis endpoints are reachable; configure SSL for database connections in production
 
-[No sources needed since this section provides general guidance]
+### Environment Variable Validation Patterns
+The server implements a two-tier validation approach:
+1. **Mandatory Variables**: Variables that cause immediate failure if missing
+2. **Recommended Variables**: Variables that trigger warnings but allow continued startup
+
+**Section sources**
+- [backend/server.js:3-23](file://backend/server.js#L3-L23)

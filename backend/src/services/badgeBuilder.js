@@ -52,6 +52,10 @@ async function getBadgeJSON(pubkey) {
       label = 'UNVERIFIED';
     }
 
+    // Determine tier based on reputation score threshold
+    const tier = reputation.score >= config.verifiedThreshold ? 'verified' : 'standard';
+    const tierColor = tier === 'verified' ? '#FFD700' : '#3B82F6';
+
     const widgetUrl = `${config.agentIdBaseUrl}/widget/${pubkey}`;
 
     const result = {
@@ -60,6 +64,8 @@ async function getBadgeJSON(pubkey) {
       status,
       badge,
       label,
+      tier,
+      tierColor,
       score: reputation.score,
       bags_score: reputation.score,
       saidTrustScore: reputation.saidScore || 0,
@@ -91,68 +97,113 @@ async function getBadgeSVG(pubkey) {
   try {
     const badgeData = await getBadgeJSON(pubkey);
 
-    // Determine colors based on status
-    let bgColor, accentColor, iconColor;
-    if (badgeData.status === 'verified') {
-      bgColor = '#1a2e1a';
-      accentColor = '#22c55e';
-      iconColor = '#22c55e';
-    } else if (badgeData.status === 'flagged') {
+    // Determine colors based on status and tier
+    let bgColor, accentColor, iconColor, tierLabel, tierBadge;
+    const isVerifiedTier = badgeData.tier === 'verified';
+    
+    if (badgeData.status === 'flagged') {
       bgColor = '#2e1a1a';
       accentColor = '#ef4444';
       iconColor = '#ef4444';
+      tierLabel = 'FLAGGED';
+      tierBadge = '';
+    } else if (badgeData.status === 'verified') {
+      // Verified status - use tier colors
+      if (isVerifiedTier) {
+        // Gold theme for verified tier
+        bgColor = '#2e251a';
+        accentColor = '#FFD700';
+        iconColor = '#FFD700';
+        tierLabel = 'VERIFIED';
+        tierBadge = '★ ';
+      } else {
+        // Blue theme for standard tier
+        bgColor = '#1a252e';
+        accentColor = '#3B82F6';
+        iconColor = '#3B82F6';
+        tierLabel = 'TRUSTED';
+        tierBadge = '';
+      }
     } else {
       bgColor = '#2e2a1a';
       accentColor = '#f59e0b';
       iconColor = '#f59e0b';
+      tierLabel = 'UNVERIFIED';
+      tierBadge = '';
     }
 
     // Status icon SVG
     let statusIcon;
     if (badgeData.status === 'verified') {
-      statusIcon = `<circle cx="24" cy="40" r="12" fill="${iconColor}"/><path d="M18 40l4 4 8-8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const checkColor = isVerifiedTier ? '#FFD700' : '#3B82F6';
+      statusIcon = `<circle cx="24" cy="40" r="12" fill="${checkColor}" fill-opacity="0.2" stroke="${checkColor}" stroke-width="2"/><path d="M18 40l4 4 8-8" stroke="${checkColor}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
     } else if (badgeData.status === 'flagged') {
-      statusIcon = `<circle cx="24" cy="40" r="12" fill="${iconColor}"/><path d="M20 36l8 8M28 36l-8 8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+      statusIcon = `<circle cx="24" cy="40" r="12" fill="${iconColor}" fill-opacity="0.2" stroke="${iconColor}" stroke-width="2"/><path d="M20 36l8 8M28 36l-8 8" stroke="${iconColor}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
     } else {
-      statusIcon = `<circle cx="24" cy="40" r="12" fill="${iconColor}"/><path d="M24 34v8M24 46v2" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+      statusIcon = `<circle cx="24" cy="40" r="12" fill="${iconColor}" fill-opacity="0.2" stroke="${iconColor}" stroke-width="2"/><path d="M24 34v8M24 46v2" stroke="${iconColor}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
     }
 
+    // Gold gradient for verified tier
+    const gradientDef = isVerifiedTier && badgeData.status === 'verified' ? `
+    <linearGradient id="tierGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFD700;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>` : `
+    <linearGradient id="tierGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:${accentColor};stop-opacity:1" />
+      <stop offset="100%" style="stop-color:${accentColor};stop-opacity:0.6" />
+    </linearGradient>`;
+
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="320" height="80" viewBox="0 0 320 80" xmlns="http://www.w3.org/2000/svg">
+<svg width="340" height="80" viewBox="0 0 340 80" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:${bgColor};stop-opacity:1" />
       <stop offset="100%" style="stop-color:#0f0f0f;stop-opacity:1" />
     </linearGradient>
+    ${gradientDef}
   </defs>
   
   <!-- Background -->
-  <rect width="320" height="80" rx="12" fill="url(#bg)" stroke="${accentColor}" stroke-width="2"/>
+  <rect width="340" height="80" rx="12" fill="url(#bg)" stroke="${accentColor}" stroke-width="${isVerifiedTier && badgeData.status === 'verified' ? '3' : '2'}"/>
   
   <!-- Status Icon -->
   ${statusIcon}
   
   <!-- Agent Name -->
-  <text x="48" y="32" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="white">
+  <text x="48" y="28" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="white">
     ${escapeXml(badgeData.name)}
   </text>
   
-  <!-- Status Label -->
-  <text x="48" y="52" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="${accentColor}" font-weight="500">
-    ${badgeData.label}
+  <!-- Tier Label -->
+  <text x="48" y="48" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="${accentColor}" font-weight="600" ${isVerifiedTier && badgeData.status === 'verified' ? 'filter="url(#glow)"' : ''}>
+    ${tierBadge}${tierLabel}
   </text>
   
   <!-- Score -->
-  <text x="280" y="36" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="white" text-anchor="end">
+  <text x="300" y="36" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="${accentColor}" text-anchor="end" ${isVerifiedTier && badgeData.status === 'verified' ? 'filter="url(#glow)"' : ''}>
     ${badgeData.score}
   </text>
-  <text x="280" y="56" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#888" text-anchor="end">
+  <text x="300" y="56" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#888" text-anchor="end">
     TRUST SCORE
   </text>
   
   <!-- Score Bar -->
-  <rect x="140" y="44" width="80" height="6" rx="3" fill="#333"/>
-  <rect x="140" y="44" width="${Math.max(4, (badgeData.score / 100) * 80)}" height="6" rx="3" fill="${accentColor}"/>
+  <rect x="140" y="52" width="100" height="6" rx="3" fill="#333"/>
+  <rect x="140" y="52" width="${Math.max(4, (badgeData.score / 100) * 100)}" height="6" rx="3" fill="url(#tierGradient)"/>
+  
+  <!-- Gold border accent for verified tier -->
+  ${isVerifiedTier && badgeData.status === 'verified' ? `
+  <rect x="2" y="2" width="336" height="76" rx="10" fill="none" stroke="#FFD700" stroke-width="1" stroke-opacity="0.3"/>
+  ` : ''}
 </svg>`;
 
     return svg;
@@ -170,20 +221,38 @@ async function getWidgetHTML(pubkey) {
   try {
     const badgeData = await getBadgeJSON(pubkey);
 
-    // Determine theme colors
-    let themeColor, accentColor, glowColor;
-    if (badgeData.status === 'verified') {
-      themeColor = '#22c55e';
-      accentColor = '#16a34a';
-      glowColor = 'rgba(34, 197, 94, 0.3)';
-    } else if (badgeData.status === 'flagged') {
+    // Determine theme colors based on status and tier
+    let themeColor, accentColor, glowColor, tierLabel, tierBadge;
+    const isVerifiedTier = badgeData.tier === 'verified';
+    
+    if (badgeData.status === 'flagged') {
       themeColor = '#ef4444';
       accentColor = '#dc2626';
       glowColor = 'rgba(239, 68, 68, 0.3)';
+      tierLabel = 'FLAGGED';
+      tierBadge = '';
+    } else if (badgeData.status === 'verified') {
+      if (isVerifiedTier) {
+        // Gold theme for verified tier
+        themeColor = '#FFD700';
+        accentColor = '#FFA500';
+        glowColor = 'rgba(255, 215, 0, 0.4)';
+        tierLabel = 'Verified Agent';
+        tierBadge = '★ ';
+      } else {
+        // Blue theme for standard tier
+        themeColor = '#3B82F6';
+        accentColor = '#2563EB';
+        glowColor = 'rgba(59, 130, 246, 0.3)';
+        tierLabel = 'Trusted Agent';
+        tierBadge = '';
+      }
     } else {
       themeColor = '#f59e0b';
       accentColor = '#d97706';
       glowColor = 'rgba(245, 158, 11, 0.3)';
+      tierLabel = 'Unverified';
+      tierBadge = '';
     }
 
     // Format dates
@@ -407,7 +476,7 @@ async function getWidgetHTML(pubkey) {
       <div class="status-icon">${badgeData.badge}</div>
       <div class="agent-info">
         <h2>${escapeHtml(badgeData.name)}</h2>
-        <div class="status-label">${badgeData.label}</div>
+        <div class="status-label">${tierBadge}${tierLabel}</div>
       </div>
     </div>
     

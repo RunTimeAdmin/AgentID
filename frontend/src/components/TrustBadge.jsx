@@ -39,15 +39,48 @@ const statusConfig = {
   },
 };
 
+// Tier configuration for verified agents
+const tierConfig = {
+  verified: {
+    label: 'VERIFIED',
+    badge: '★',
+    bgClass: 'bg-gradient-to-r from-yellow-500/20 to-amber-500/20',
+    borderClass: 'border-yellow-500/50',
+    glowClass: 'shadow-[0_0_30px_rgba(255,215,0,0.3)]',
+    textClass: 'text-yellow-400',
+    iconBg: 'bg-yellow-500/20',
+    iconColor: 'text-yellow-400',
+    shimmer: true,
+  },
+  standard: {
+    label: 'TRUSTED',
+    badge: '',
+    bgClass: 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20',
+    borderClass: 'border-blue-500/50',
+    glowClass: 'shadow-[0_0_20px_rgba(59,130,246,0.2)]',
+    textClass: 'text-blue-400',
+    iconBg: 'bg-blue-500/20',
+    iconColor: 'text-blue-400',
+    shimmer: false,
+  },
+};
+
 export default function TrustBadge({ 
   status = 'unverified', 
   name, 
   score, 
   registeredAt, 
   totalActions,
+  tier,
+  tierColor,
   className = '' 
 }) {
   const config = statusConfig[status] || statusConfig.unverified;
+  
+  // Determine tier styling for verified agents
+  const isVerified = status === 'verified';
+  const tierStyle = isVerified && tier === 'verified' ? tierConfig.verified : 
+                    isVerified ? tierConfig.standard : null;
   
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown';
@@ -59,11 +92,19 @@ export default function TrustBadge({
     });
   };
 
+  // Use tier styling if verified, otherwise use status styling
+  const bgClass = tierStyle ? tierStyle.bgClass : config.bgClass;
+  const glowClass = tierStyle ? tierStyle.glowClass : config.glowClass;
+  const borderClass = tierStyle ? tierStyle.borderClass : '';
+  const iconBg = tierStyle ? tierStyle.iconBg : config.iconBg;
+  const iconColor = tierStyle ? tierStyle.iconColor : config.iconColor;
+  const tierLabel = tierStyle ? `${tierStyle.badge} ${tierStyle.label}` : config.label;
+
   return (
     <div 
       className={`
         relative overflow-hidden rounded-xl border
-        ${config.bgClass} ${config.glowClass}
+        ${bgClass} ${glowClass} ${borderClass}
         transition-all duration-300 hover:scale-[1.02]
         ${className}
       `}
@@ -71,15 +112,23 @@ export default function TrustBadge({
       {/* Background gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
       
+      {/* Gold shimmer effect for verified tier */}
+      {tierStyle?.shimmer && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/10 to-transparent animate-shimmer" 
+               style={{ transform: 'translateX(-100%)', animation: 'shimmer 2s infinite' }} />
+        </div>
+      )}
+      
       <div className="relative p-4">
         {/* Header: Icon + Status Label */}
         <div className="flex items-center gap-3 mb-3">
-          <div className={`w-10 h-10 rounded-lg ${config.iconBg} flex items-center justify-center ${config.iconColor}`}>
+          <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center ${iconColor}`}>
             {config.icon}
           </div>
           <div className="flex-1 min-w-0">
-            <div className={`text-xs font-bold tracking-wider ${config.iconColor}`}>
-              {config.label}
+            <div className={`text-xs font-bold tracking-wider ${iconColor}`}>
+              {tierLabel}
             </div>
             {name && (
               <div className="text-[var(--text-primary)] font-semibold truncate text-lg">
@@ -89,7 +138,7 @@ export default function TrustBadge({
           </div>
           {score !== undefined && (
             <div className="text-right">
-              <div className="text-2xl font-bold text-[var(--text-primary)]">
+              <div className={`text-2xl font-bold ${tierStyle ? tierStyle.textClass : 'text-[var(--text-primary)]'}`}>
                 {score}
                 <span className="text-sm font-normal text-[var(--text-muted)]">/100</span>
               </div>
@@ -140,5 +189,7 @@ TrustBadge.propTypes = {
   score: PropTypes.number,
   registeredAt: PropTypes.string,
   totalActions: PropTypes.number,
+  tier: PropTypes.oneOf(['verified', 'standard']),
+  tierColor: PropTypes.string,
   className: PropTypes.string,
 };

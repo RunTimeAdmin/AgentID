@@ -18,7 +18,16 @@
 - [transform.js](file://backend/src/utils/transform.js)
 - [config/index.js](file://backend/src/config/index.js)
 - [package.json](file://backend/package.json)
+- [API_REFERENCE.md](file://docs/API_REFERENCE.md)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced Ed25519 cryptographic authentication documentation for flag submissions
+- Expanded rate limiting documentation with detailed configurations
+- Updated authentication flow specifications with comprehensive signature requirements
+- Added comprehensive PKI challenge-response message format documentation
+- Enhanced security considerations for cryptographic operations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -91,7 +100,7 @@ AuthLimiter --> RVerify
   - PUT /agents/:pubkey/update: Update agent metadata with Ed25519 signature verification.
 - Attestations and Flagging
   - POST /agents/:pubkey/attest: Record action success/failure and optionally refresh reputation.
-  - POST /agents/:pubkey/flag: Flag suspicious behavior; auto-flagging when thresholds are met.
+  - POST /agents/:pubkey/flag: Flag suspicious behavior with comprehensive Ed25519 cryptographic authentication.
   - GET /agents/:pubkey/attestations: Agent action statistics.
   - GET /agents/:pubkey/flags: Flags filed against an agent.
 - Widget
@@ -333,22 +342,38 @@ S-->>C : "Response"
     - [curl snippet path:25-72](file://backend/src/routes/attestations.js#L25-L72)
 
 - POST /agents/:pubkey/flag
-  - Purpose: Flag suspicious behavior; auto-flagging when thresholds are met.
-  - Authentication: None.
-  - Rate limit: Default limiter (100 per 15 minutes).
+  - Purpose: Flag suspicious behavior with comprehensive Ed25519 cryptographic authentication.
+  - Authentication: Ed25519 signature-based authentication (strict rate limiting).
+  - Rate limit: Auth limiter (20 requests per 15 minutes) - **Enhanced** from default tier.
   - Path parameter:
     - pubkey
   - Request body:
-    - reporterPubkey (required)
+    - reporterPubkey (required, valid Solana address)
+    - signature (required, base58-encoded Ed25519 signature)
+    - timestamp (required, number)
     - reason (required, non-empty string)
     - evidence (optional)
+  - Validation:
+    - reporterPubkey: valid Solana address format (base58, 32 bytes)
+    - signature: base58-encoded Ed25519 signature
+    - timestamp: within ±5 minutes (300,000 ms) of current time
+    - reason: non-empty string
+  - Signature verification:
+    - Constructs message: "AGENTID-FLAG:{pubkey}:{reporterPubkey}:{timestamp}"
+    - Verifies Ed25519 signature against reporterPubkey
+    - Validates signature format and encoding
   - Behavior:
-    - Creates flag record.
-    - If unresolved flags ≥ 3 and status != flagged, updates agent status to flagged.
+    - Creates flag record with cryptographic proof of ownership
+    - If unresolved flags ≥ 3 and status != flagged, updates agent status to flagged
   - Responses:
     - 201 Created: { flag, unresolved_flags, auto_flagged }
-    - 400 Bad Request: missing fields
+    - 400 Bad Request: missing fields, invalid signature format, timestamp outside window
+    - 401 Unauthorized: invalid reporter signature
     - 404 Not Found: agent not found
+  - Security:
+    - Comprehensive cryptographic authentication prevents anonymous flagging
+    - Replay protection via timestamp window
+    - Strict rate limiting for authentication endpoints
   - Example curl:
     - [curl snippet path:78-127](file://backend/src/routes/attestations.js#L78-L127)
 
@@ -435,6 +460,47 @@ Verify-->>Client : "200 OK"
 - [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
 - [verify.js:55-112](file://backend/src/routes/verify.js#L55-L112)
 
+### Enhanced Rate Limiting Configuration
+**Updated** Enhanced rate limiting documentation with comprehensive configurations
+
+- Default rate limiter: 100 requests per 15 minutes per IP
+  - Used for read operations (GET requests)
+  - Applied to endpoints: /agents, /badge, /reputation, /discover, /agents/:pubkey/attestations, /agents/:pubkey/flags
+- Auth rate limiter: 20 requests per 15 minutes per IP
+  - Used for write operations and authentication
+  - Applied to endpoints: /register, /verify/challenge, /verify/response, /agents/:pubkey/update, /agents/:pubkey/flag
+- Rate limit headers:
+  - Standard headers: RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset
+  - Legacy headers: Disabled (legacyHeaders: false)
+- Response format:
+  - JSON error response with error message and status code
+  - 429 status code for rate limit exceeded
+
+**Section sources**
+- [rateLimit.js:8-62](file://backend/src/middleware/rateLimit.js#L8-L62)
+
+### Comprehensive Ed25519 Cryptographic Authentication for Flag Submissions
+**Updated** Added comprehensive Ed25519 cryptographic authentication for flag submissions
+
+- Authentication model:
+  - Ed25519 signature-based authentication for all state-modifying operations
+  - Eliminates need for shared secrets or API tokens
+  - Provides non-repudiation and strong cryptographic proof
+- Flag submission authentication:
+  - Requires reporterPubkey (valid Solana address)
+  - Requires signature (base58-encoded Ed25519)
+  - Requires timestamp (within ±5 minutes window)
+  - Message format: "AGENTID-FLAG:{pubkey}:{reporterPubkey}:{timestamp}"
+- Security benefits:
+  - Prevents anonymous bulk flagging
+  - Ensures reporter control over reported actions
+  - Provides replay protection via timestamp validation
+  - Maintains audit trail with cryptographic signatures
+
+**Section sources**
+- [attestations.js:80-180](file://backend/src/routes/attestations.js#L80-L180)
+- [transform.js:87-93](file://backend/src/utils/transform.js#L87-L93)
+
 ## Dependency Analysis
 - Route-to-service dependencies:
   - Registration depends on Bags signature verification and SAID binding.
@@ -493,8 +559,6 @@ Widget["widget.js"] --> DB
 - Network timeouts:
   - External API calls include timeouts to prevent hanging requests.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 - Common HTTP errors:
   - 400 Bad Request: validation failures (missing/invalid fields).
@@ -509,6 +573,7 @@ Widget["widget.js"] --> DB
 - Signature verification:
   - Ensure messages include the nonce for registration.
   - Verify Ed25519 signatures are base58-encoded and match the expected challenge format.
+  - For flag submissions, ensure reporterPubkey is a valid Solana address.
 - External services:
   - BAGS and SAID endpoints may be temporarily unavailable; handle gracefully with retries and fallbacks.
 
@@ -519,9 +584,7 @@ Widget["widget.js"] --> DB
 - [agents.js:161-176](file://backend/src/routes/agents.js#L161-L176)
 
 ## Conclusion
-The AgentID backend provides a comprehensive REST API for identity registration, verification, trust scoring, discovery, and widget embedding. Strict rate limiting, signature verification, and external integrations ensure robustness and security. The modular route architecture and caching strategies support scalability and performance.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The AgentID backend provides a comprehensive REST API for identity registration, verification, trust scoring, discovery, and widget embedding. Enhanced Ed25519 cryptographic authentication for flag submissions ensures robust security against abuse. Strict rate limiting, comprehensive signature verification, and external integrations ensure reliability and security. The modular route architecture and caching strategies support scalability and performance.
 
 ## Appendices
 
@@ -541,7 +604,7 @@ The AgentID backend provides a comprehensive REST API for identity registration,
   - PUT /agents/:pubkey/update: Update metadata with Ed25519 signature.
 - Attestations and Flagging
   - POST /agents/:pubkey/attest: Record action outcome.
-  - POST /agents/:pubkey/flag: Flag suspicious behavior.
+  - POST /agents/:pubkey/flag: Flag suspicious behavior with Ed25519 authentication.
   - GET /agents/:pubkey/attestations: Action statistics.
   - GET /agents/:pubkey/flags: Flags against agent.
 - Widget
@@ -556,26 +619,34 @@ The AgentID backend provides a comprehensive REST API for identity registration,
 - [attestations.js:25-185](file://backend/src/routes/attestations.js#L25-L185)
 - [widget.js:32-100](file://backend/src/routes/widget.js#L32-L100)
 
-### Rate Limiting Details
+### Enhanced Rate Limiting Details
+**Updated** Enhanced rate limiting documentation with comprehensive configurations
+
 - Default limiter: 100 requests per 15 minutes per IP.
 - Auth limiter: 20 requests per 15 minutes per IP.
 - Headers: Standard headers include rate limit information; legacy headers disabled.
+- Response format: JSON error response with error message and status code.
 
 **Section sources**
 - [rateLimit.js:44-55](file://backend/src/middleware/rateLimit.js#L44-L55)
 
 ### Security Considerations
+**Updated** Enhanced security considerations with comprehensive cryptographic authentication
+
 - Helmet: Security headers enabled.
 - CORS: Configurable origin with credentials support.
 - Input validation: Strict checks on field presence, types, and lengths.
-- Signature verification: Ed25519 verification for registration and metadata updates.
+- Signature verification: Ed25519 verification for registration, metadata updates, and flag submissions.
 - Replay protection: Nonce inclusion and timestamp windows.
 - XSS prevention: HTML escaping in widget responses.
+- Cryptographic authentication: Comprehensive Ed25519 signature verification for flag submissions.
+- Rate limiting: Tiered rate limiting with strict authentication limits.
 
 **Section sources**
 - [server.js:22-28](file://backend/server.js#L22-L28)
 - [register.js:82-87](file://backend/src/routes/register.js#L82-L87)
 - [agents.js:161-176](file://backend/src/routes/agents.js#L161-L176)
+- [attestations.js:117-147](file://backend/src/routes/attestations.js#L117-L147)
 - [widget.js:18-26](file://backend/src/routes/widget.js#L18-L26)
 
 ### Environment Variables and Configuration
@@ -589,3 +660,29 @@ The AgentID backend provides a comprehensive REST API for identity registration,
 
 **Section sources**
 - [package.json:18-30](file://backend/package.json#L18-L30)
+
+### Cryptographic Authentication Flow
+**New** Comprehensive cryptographic authentication flow for flag submissions
+
+```mermaid
+sequenceDiagram
+participant Reporter as "Reporter Client"
+participant API as "AgentID API"
+participant Crypto as "Ed25519 Crypto"
+participant DB as "Database"
+Reporter->>API : "POST /agents/ : pubkey/flag"
+API->>Crypto : "Validate reporterPubkey format"
+Crypto-->>API : "Valid Solana address"
+API->>Crypto : "Verify signature against message"
+Crypto->>Crypto : "Construct message : AGENTID-FLAG : {pubkey} : {reporterPubkey} : {timestamp}"
+Crypto->>Crypto : "Decode base58 signature and pubkey"
+Crypto->>Crypto : "Verify Ed25519 signature"
+Crypto-->>API : "Signature valid/invalid"
+API->>DB : "Create flag record if valid"
+DB-->>API : "Flag created"
+API-->>Reporter : "201 Created with flag data"
+```
+
+**Diagram sources**
+- [attestations.js:126-147](file://backend/src/routes/attestations.js#L126-L147)
+- [transform.js:87-93](file://backend/src/utils/transform.js#L87-L93)

@@ -92,14 +92,14 @@ DISCOVER --> API
 - [main.jsx:1-11](file://frontend/src/main.jsx#L1-L11)
 - [App.jsx:87-104](file://frontend/src/App.jsx#L87-L104)
 - [Registry.jsx:1-276](file://frontend/src/pages/Registry.jsx#L1-L276)
-- [AgentDetail.jsx:1-497](file://frontend/src/pages/AgentDetail.jsx#L1-L497)
+- [AgentDetail.jsx:1-498](file://frontend/src/pages/AgentDetail.jsx#L1-L498)
 - [Register.jsx:1-673](file://frontend/src/pages/Register.jsx#L1-L673)
 - [Discover.jsx:1-421](file://frontend/src/pages/Discover.jsx#L1-L421)
 - [TrustBadge.jsx:1-145](file://frontend/src/components/TrustBadge.jsx#L1-L145)
 - [ReputationBreakdown.jsx:1-165](file://frontend/src/components/ReputationBreakdown.jsx#L1-L165)
 - [CapabilityList.jsx:1-111](file://frontend/src/components/CapabilityList.jsx#L1-L111)
-- [FlagModal.jsx:1-179](file://frontend/src/components/FlagModal.jsx#L1-L179)
-- [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
+- [FlagModal.jsx:1-258](file://frontend/src/components/FlagModal.jsx#L1-L258)
+- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
 
 **Section sources**
 - [main.jsx:1-11](file://frontend/src/main.jsx#L1-L11)
@@ -111,25 +111,27 @@ DISCOVER --> API
 - Navigation and Footer: Provide global site layout and links.
 - Pages:
   - Registry: Browse agents with filters, pagination, and loading/error states.
-  - AgentDetail: View agent profile, reputation, capabilities, flags/attestations, and flag submission.
+  - AgentDetail: View agent profile, reputation, capabilities, flags/attestations, and flag submission with cryptographic authentication.
   - Register: Multi-step agent onboarding with challenge-response and metadata collection.
   - Discover: Capability-based agent discovery with suggestions and ranking.
 - Reusable Components:
   - TrustBadge: Visual trust status and score display.
   - ReputationBreakdown: Five-factor reputation scoring visualization.
   - CapabilityList: Capability tags with categorization and icons.
-  - FlagModal: Controlled modal for reporting agents with validation.
+  - FlagModal: Enhanced controlled modal for reporting agents with Ed25519 signature requirements and cryptographic authentication.
+
+**Updated** Enhanced FlagModal component now supports Ed25519 signature requirements, message construction, and cryptographic authentication flows for flag submissions.
 
 **Section sources**
 - [App.jsx:7-104](file://frontend/src/App.jsx#L7-L104)
 - [Registry.jsx:51-276](file://frontend/src/pages/Registry.jsx#L51-L276)
-- [AgentDetail.jsx:167-497](file://frontend/src/pages/AgentDetail.jsx#L167-L497)
+- [AgentDetail.jsx:167-498](file://frontend/src/pages/AgentDetail.jsx#L167-L498)
 - [Register.jsx:241-673](file://frontend/src/pages/Register.jsx#L241-L673)
 - [Discover.jsx:94-421](file://frontend/src/pages/Discover.jsx#L94-L421)
 - [TrustBadge.jsx:42-145](file://frontend/src/components/TrustBadge.jsx#L42-L145)
 - [ReputationBreakdown.jsx:46-165](file://frontend/src/components/ReputationBreakdown.jsx#L46-L165)
 - [CapabilityList.jsx:69-111](file://frontend/src/components/CapabilityList.jsx#L69-L111)
-- [FlagModal.jsx:4-179](file://frontend/src/components/FlagModal.jsx#L4-L179)
+- [FlagModal.jsx:4-258](file://frontend/src/components/FlagModal.jsx#L4-L258)
 
 ## Architecture Overview
 The app uses React Router for client-side routing and a shared Axios-based API client for backend integration. Pages orchestrate state and render reusable components. Styling relies on TailwindCSS with a custom dark theme and glass morphism effects.
@@ -147,19 +149,22 @@ P->>A : Fetch agent, badge, reputation, attestations, flags
 A-->>P : Data or Error
 P->>C : Render TrustBadge, ReputationBreakdown, CapabilityList, FlagModal
 U->>C : Open FlagModal
-C->>A : Submit flag (reason, optional JSON evidence)
+C->>C : Generate message to sign with Ed25519 requirements
+C->>U : Display message to sign
+U->>C : Provide signature and reporter pubkey
+C->>A : Submit flag with cryptographic authentication
 A-->>C : Success or Error
 C-->>P : Close modal and refresh flags
 ```
 
 **Diagram sources**
-- [AgentDetail.jsx:167-497](file://frontend/src/pages/AgentDetail.jsx#L167-L497)
-- [FlagModal.jsx:4-179](file://frontend/src/components/FlagModal.jsx#L4-L179)
-- [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
+- [AgentDetail.jsx:167-498](file://frontend/src/pages/AgentDetail.jsx#L167-L498)
+- [FlagModal.jsx:4-258](file://frontend/src/components/FlagModal.jsx#L4-L258)
+- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
 
 **Section sources**
 - [App.jsx:87-104](file://frontend/src/App.jsx#L87-L104)
-- [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
+- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
 
 ## Detailed Component Analysis
 
@@ -216,7 +221,7 @@ ShowSkeletons --> End
 - Behavior:
   - Parallel fetch of agent, badge, reputation, attestations, flags.
   - Renders hero with TrustBadge, reputation breakdown, details, action statistics, capabilities, description, and activity history.
-  - Flag submission opens FlagModal, validates reason/evidence, submits via API, refreshes flags.
+  - Flag submission opens FlagModal with cryptographic authentication, validates reason/evidence/signature/reporterPubkey, submits via API, refreshes flags.
   - Handles 404 and generic errors with dedicated UI.
 - Backend integration: getAgent, getBadge, getReputation, getAttestations, getFlags, flagAgent.
 
@@ -232,7 +237,7 @@ D->>A : getFlags(pubkey)
 A-->>D : Data or null
 D->>D : Set state and render
 D->>D : On flag submit
-D->>A : flagAgent(pubkey, {reason, evidence})
+D->>A : flagAgent(pubkey, {reason, evidence, reporterPubkey, signature, timestamp})
 A-->>D : Success
 D->>A : getFlags(pubkey)
 A-->>D : Updated flags
@@ -240,12 +245,12 @@ D->>D : Update flags state
 ```
 
 **Diagram sources**
-- [AgentDetail.jsx:167-497](file://frontend/src/pages/AgentDetail.jsx#L167-L497)
-- [api.js:47-94](file://frontend/src/lib/api.js#L47-L94)
+- [AgentDetail.jsx:167-498](file://frontend/src/pages/AgentDetail.jsx#L167-L498)
+- [api.js:91-95](file://frontend/src/lib/api.js#L91-L95)
 
 **Section sources**
-- [AgentDetail.jsx:167-497](file://frontend/src/pages/AgentDetail.jsx#L167-L497)
-- [api.js:47-94](file://frontend/src/lib/api.js#L47-L94)
+- [AgentDetail.jsx:167-498](file://frontend/src/pages/AgentDetail.jsx#L167-L498)
+- [api.js:91-95](file://frontend/src/lib/api.js#L91-L95)
 
 ### Register Page
 - State: currentStep, formData, errors, serverError, submitting, registeredAgent.
@@ -338,10 +343,18 @@ HasResults --> |Yes| RenderResults["Render ranked cards with capabilities"]
 
 #### FlagModal
 - Props: isOpen, onClose, onSubmit, agentPubkey.
-- Validates reason and optional JSON evidence; submits via onSubmit callback; closes on success.
+- **Enhanced** with Ed25519 signature requirements and cryptographic authentication:
+  - **New State Management**: Added reporterPubkey, signature, timestamp, and messageToSign state variables.
+  - **Cryptographic Message Construction**: Generates standardized message format: `AGENTID-FLAG:{agentPubkey}:{reporterPubkey}:{timestamp}`.
+  - **Ed25519 Signature Validation**: Requires base58-encoded Ed25519 signatures for authentication.
+  - **Enhanced Form Fields**: Includes reporterPubkey input, dynamic message display, and signature textarea.
+  - **Real-time Message Generation**: Automatically updates message when reporterPubkey or timestamp changes.
+  - **Timestamp Management**: Updates timestamp when modal opens and includes it in authentication.
+  - **Validation Improvements**: Validates signature presence and provides clear error messages for cryptographic requirements.
+  - **Integration Flow**: Submits {reason, evidence, reporterPubkey, signature, timestamp} to onSubmit callback.
 
 **Section sources**
-- [FlagModal.jsx:4-179](file://frontend/src/components/FlagModal.jsx#L4-L179)
+- [FlagModal.jsx:4-258](file://frontend/src/components/FlagModal.jsx#L4-L258)
 
 ### API Integration Patterns
 - Centralized client in api.js with:
@@ -349,9 +362,10 @@ HasResults --> |Yes| RenderResults["Render ranked cards with capabilities"]
   - Request interceptor adds Authorization Bearer token from localStorage.
   - Response interceptor handles 401 by removing token.
   - Exposed functions for agents, badges, reputation, registration, verification, attestations, discovery, widgets, updates, and histories.
+  - **New Function**: flagAgent(pubkey, flagData) - posts flag data with cryptographic authentication.
 
 **Section sources**
-- [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
+- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
 
 ### Styling and Theming
 - TailwindCSS configured via Vite plugin.
@@ -361,7 +375,7 @@ HasResults --> |Yes| RenderResults["Render ranked cards with capabilities"]
   - Gradient text.
   - Status badges for verified/unverified/flagged.
   - Animations (fade-in, slide-in, pulse-glow).
-- Responsive design uses Tailwind’s responsive prefixes and flex/grid layouts.
+- Responsive design uses Tailwind's responsive prefixes and flex/grid layouts.
 
 **Section sources**
 - [index.css:1-163](file://frontend/src/index.css#L1-L163)
@@ -407,6 +421,7 @@ Vite --> React
 - Skeleton loaders improve perceived performance during network requests.
 - Debounce or throttle search in Discover could reduce API calls (not currently implemented).
 - Lazy loading images (if added) and virtualizing long lists would further optimize.
+- **Enhanced** FlagModal performance: Real-time message generation and validation occur efficiently without blocking UI.
 
 ## Troubleshooting Guide
 - Authentication:
@@ -415,24 +430,29 @@ Vite --> React
   - Check proxy configuration (/api to backend) and CORS settings.
 - Form validation:
   - Register step 1 requires valid pubkey and name; step 2 requires signature.
-  - FlagModal requires reason; optional JSON evidence must parse.
+  - **Enhanced** FlagModal validation: Requires reason, reporterPubkey, signature, and optional JSON evidence; signature must be base58-encoded Ed25519 signature.
 - Error boundaries:
   - Pages render explicit error banners and empty states for graceful degradation.
+- **New** Cryptographic Authentication Issues:
+  - Ensure reporterPubkey follows Solana wallet address format.
+  - Verify signature is generated using Ed25519 private key and base58 encoding.
+  - Confirm message format matches `AGENTID-FLAG:{agentPubkey}:{reporterPubkey}:{timestamp}`.
+  - Check timestamp is current and included in authentication.
 
 **Section sources**
 - [api.js:23-33](file://frontend/src/lib/api.js#L23-L33)
 - [Register.jsx:269-314](file://frontend/src/pages/Register.jsx#L269-L314)
-- [FlagModal.jsx:12-47](file://frontend/src/components/FlagModal.jsx#L12-L47)
-- [AgentDetail.jsx:260-281](file://frontend/src/pages/AgentDetail.jsx#L260-L281)
+- [FlagModal.jsx:12-73](file://frontend/src/components/FlagModal.jsx#L12-L73)
+- [AgentDetail.jsx:214-227](file://frontend/src/pages/AgentDetail.jsx#L214-L227)
 
 ## Conclusion
-The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management.
+The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management. **The FlagModal enhancement introduces robust cryptographic authentication using Ed25519 signatures, significantly improving security and trust in the flag submission process.**
 
 ## Appendices
 
 ### Component Usage Examples
 - Registry: Pass TrustBadge to each agent card; apply className for sizing.
-- AgentDetail: Compose TrustBadge, ReputationBreakdown, CapabilityList; embed FlagModal with callbacks.
+- AgentDetail: Compose TrustBadge, ReputationBreakdown, CapabilityList; embed FlagModal with callbacks; **Enhanced** with cryptographic authentication flow.
 - Register: Use FormField, TextAreaField, CapabilitiesInput; manage multi-step state transitions.
 - Discover: Render suggested capabilities and clickable chips; pass results to result cards.
 
@@ -440,3 +460,19 @@ The AgentID frontend is a modular, theme-consistent React application with clear
 - Theming: Adjust CSS variables in index.css to change palettes and glows.
 - Components: Extend TrustBadge props to include tier or additional metrics; customize CapabilityList styles.
 - API: Add interceptors for logging or retry policies; expand api.js with new endpoints.
+- **Enhanced** FlagModal: Customize message format, adjust signature requirements, or modify authentication parameters.
+
+### Cryptographic Authentication Flow
+**New** The FlagModal implements a comprehensive Ed25519 signature authentication system:
+
+1. **Message Construction**: Generates standardized message format: `AGENTID-FLAG:{agentPubkey}:{reporterPubkey}:{timestamp}`
+2. **Signature Requirement**: Requires base58-encoded Ed25519 signatures for cryptographic proof of ownership
+3. **Real-time Validation**: Validates signature presence and provides clear error messages
+4. **Timestamp Integration**: Includes current timestamp in authentication for freshness
+5. **Secure Submission**: Submits all authentication data to backend for verification
+
+**Section sources**
+- [FlagModal.jsx:13-16](file://frontend/src/components/FlagModal.jsx#L13-L16)
+- [FlagModal.jsx:47-51](file://frontend/src/components/FlagModal.jsx#L47-L51)
+- [FlagModal.jsx:144](file://frontend/src/components/FlagModal.jsx#L144)
+- [FlagModal.jsx:166](file://frontend/src/components/FlagModal.jsx#L166)

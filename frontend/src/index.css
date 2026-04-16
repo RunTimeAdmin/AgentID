@@ -160,3 +160,13 @@ body {
   color: var(--accent-red);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
+
+/* Shimmer animation for verified tier */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}

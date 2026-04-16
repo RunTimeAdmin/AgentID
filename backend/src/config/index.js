@@ -24,7 +24,10 @@ const config = {
 
   // Cache and expiry configuration
   badgeCacheTtl: parseInt(process.env.BADGE_CACHE_TTL, 10) || 60,
-  challengeExpirySeconds: parseInt(process.env.CHALLENGE_EXPIRY_SECONDS, 10) || 300
+  challengeExpirySeconds: parseInt(process.env.CHALLENGE_EXPIRY_SECONDS, 10) || 300,
+
+  // Verified tier threshold configuration
+  verifiedThreshold: parseInt(process.env.VERIFIED_THRESHOLD || '70', 10)
 };
 
 module.exports = config;
