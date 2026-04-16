@@ -25,11 +25,10 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced Ed25519 signature verification implementation documentation with timestamp validation
-- Added comprehensive cryptographic proof-of-ownership requirements for flag submissions
-- Updated PKI challenge-response system details with timestamp validation
-- Expanded authentication security measures with replay attack prevention through timestamp windows
-- Added detailed frontend integration for cryptographic signature generation
+- Enhanced authentication security with dedicated authLimiter middleware for flag submission endpoints
+- Implemented stricter rate limiting for sensitive operations while maintaining appropriate performance
+- Updated rate limiting architecture to differentiate between general endpoints and authentication endpoints
+- Improved security posture for critical operations like flag submissions, registration, and verification
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -44,7 +43,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document provides comprehensive security documentation for the AgentID system with a focus on authentication security, data protection, and API security measures. It explains the Ed25519 signature verification implementation, replay attack prevention through challenge-response system, and rate limiting middleware configuration. The system now includes enhanced cryptographic proof-of-ownership requirements for flag submissions with timestamp validation, comprehensive input validation strategies, SQL injection prevention, CORS configuration, and security headers implementation. The PKI challenge-response system is detailed, including nonce management, expiration policies, and one-time use protection with timestamp validation. Error handling security practices, sensitive data handling, and secure communication protocols are addressed. External API integrations, Redis security configuration, and database security measures are covered, along with threat modeling, security audit procedures, and incident response protocols.
+This document provides comprehensive security documentation for the AgentID system with a focus on authentication security, data protection, and API security measures. It explains the Ed25519 signature verification implementation, replay attack prevention through challenge-response system, and enhanced rate limiting middleware configuration with dedicated authentication endpoints. The system now includes enhanced cryptographic proof-of-ownership requirements for flag submissions with timestamp validation, comprehensive input validation strategies, SQL injection prevention, CORS configuration, and security headers implementation. The PKI challenge-response system is detailed, including nonce management, expiration policies, and one-time use protection with timestamp validation. Error handling security practices, sensitive data handling, and secure communication protocols are addressed. External API integrations, Redis security configuration, and database security measures are covered, along with threat modeling, security audit procedures, and incident response protocols.
 
 ## Project Structure
 The backend follows a layered architecture:
@@ -61,7 +60,8 @@ graph TB
 Client["Client"]
 Helmet["Helmet (Security Headers)"]
 CORS["CORS"]
-RateLimit["Rate Limiting"]
+DefaultLimiter["Default Rate Limiter<br/>100 requests/15min/IP"]
+AuthLimiter["Auth Rate Limiter<br/>20 requests/15min/IP"]
 Express["Express App"]
 RoutesVerify["Routes: /verify/*"]
 RoutesRegister["Routes: /register"]
@@ -78,11 +78,16 @@ FrontendAPI["Frontend: api.js"]
 Client --> Express
 Express --> Helmet
 Express --> CORS
-Express --> RateLimit
+Express --> DefaultLimiter
+Express --> AuthLimiter
 Express --> RoutesVerify
 Express --> RoutesRegister
 Express --> RoutesAttestations
 Express --> RoutesAgents
+RoutesVerify --> AuthLimiter
+RoutesRegister --> AuthLimiter
+RoutesAttestations --> AuthLimiter
+RoutesAgents --> AuthLimiter
 RoutesVerify --> ServicesPKI
 RoutesRegister --> ServicesBags
 RoutesRegister --> ServicesSAID
@@ -99,8 +104,8 @@ FrontendAPI --> Express
 
 **Diagram sources**
 - [server.js:1-104](file://backend/server.js#L1-L104)
-- [routes/verify.js:1-115](file://backend/src/routes/verify.js#L1-L115)
-- [routes/register.js:1-156](file://backend/src/routes/register.js#L1-L156)
+- [routes/verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
+- [routes/register.js:1-160](file://backend/src/routes/register.js#L1-L160)
 - [routes/attestations.js:1-241](file://backend/src/routes/attestations.js#L1-L241)
 - [routes/agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 - [services/pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
@@ -131,7 +136,7 @@ FrontendAPI --> Express
 - API Security Measures
   - Helmet sets robust security headers.
   - CORS configured with origin and credentials support.
-  - Rate limiting applied globally and specifically to authentication endpoints.
+  - Enhanced rate limiting with dedicated authLimiter middleware for sensitive endpoints while maintaining appropriate performance for general endpoints.
   - Centralized error handling logs and sanitizes error responses.
 
 - External Integrations
@@ -146,8 +151,8 @@ FrontendAPI --> Express
 
 **Section sources**
 - [services/pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
-- [routes/verify.js:1-115](file://backend/src/routes/verify.js#L1-L115)
-- [routes/register.js:1-156](file://backend/src/routes/register.js#L1-L156)
+- [routes/verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
+- [routes/register.js:1-160](file://backend/src/routes/register.js#L1-L160)
 - [routes/attestations.js:76-180](file://backend/src/routes/attestations.js#L76-L180)
 - [routes/agents.js:120-252](file://backend/src/routes/agents.js#L120-L252)
 - [services/bagsAuthVerifier.js:1-87](file://backend/src/services/bagsAuthVerifier.js#L1-L87)
@@ -162,27 +167,35 @@ FrontendAPI --> Express
 - [frontend/src/lib/api.js:91-95](file://frontend/src/lib/api.js#L91-L95)
 
 ## Architecture Overview
-The system enforces authentication and authorization through Ed25519-based challenge-response with timestamp validation, protects against replay attacks via nonces, expiration, and time-based validation, and secures API access with rate limiting and security headers. Data integrity is ensured through parameterized queries and environment-driven configuration. The enhanced flag submission system provides cryptographic proof-of-ownership through mandatory reporterPubkey, signature verification, and timestamp validation. External integrations are handled securely with timeouts and error logging.
+The system enforces authentication and authorization through Ed25519-based challenge-response with timestamp validation, protects against replay attacks via nonces, expiration, and time-based validation, and secures API access with enhanced rate limiting and security headers. The new architecture implements a dual-tier rate limiting system: a default limiter for general endpoints and a stricter authLimiter for sensitive authentication operations. Data integrity is ensured through parameterized queries and environment-driven configuration. The enhanced flag submission system provides cryptographic proof-of-ownership through mandatory reporterPubkey, signature verification, and timestamp validation. External integrations are handled securely with timeouts and error logging.
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client"
 participant Server as "Express Server"
+participant DefaultLimiter as "Default Rate Limiter"
+participant AuthLimiter as "Auth Rate Limiter"
 participant VerifyRoute as "Routes : /verify"
 participant AttestationsRoute as "Routes : /agents/ : pubkey/flag"
 participant PKIService as "Service : pkiChallenge"
 participant DB as "Models : queries.js"
 participant Crypto as "tweetnacl + bs58"
 Client->>Server : "POST /verify/challenge"
-Server->>VerifyRoute : "authLimiter"
+Server->>DefaultLimiter : "Apply default rate limiting"
+DefaultLimiter->>VerifyRoute : "Allow request"
 VerifyRoute->>VerifyRoute : "Validate pubkey"
+VerifyRoute->>AuthLimiter : "Apply auth rate limiting"
+AuthLimiter->>VerifyRoute : "Allow request"
 VerifyRoute->>PKIService : "issueChallenge(pubkey)"
 PKIService->>DB : "createVerification(...)"
 PKIService-->>VerifyRoute : "{nonce, challenge, expiresIn}"
 VerifyRoute-->>Client : "Challenge issued"
 Client->>Server : "POST /verify/response"
-Server->>VerifyRoute : "authLimiter"
+Server->>DefaultLimiter : "Apply default rate limiting"
+DefaultLimiter->>VerifyRoute : "Allow request"
 VerifyRoute->>VerifyRoute : "Validate pubkey, nonce, signature"
+VerifyRoute->>AuthLimiter : "Apply auth rate limiting"
+AuthLimiter->>VerifyRoute : "Allow request"
 VerifyRoute->>PKIService : "verifyChallenge(pubkey, nonce, signature)"
 PKIService->>DB : "getVerification(pubkey, nonce)"
 PKIService->>Crypto : "Verify Ed25519 signature"
@@ -191,8 +204,11 @@ PKIService->>DB : "updateLastVerified(pubkey)"
 PKIService-->>VerifyRoute : "{verified, pubkey, timestamp}"
 VerifyRoute-->>Client : "Verification result"
 Client->>Server : "POST /agents/ : pubkey/flag"
-Server->>AttestationsRoute : "authLimiter"
+Server->>DefaultLimiter : "Apply default rate limiting"
+DefaultLimiter->>AttestationsRoute : "Allow request"
 AttestationsRoute->>AttestationsRoute : "Validate reporterPubkey, signature, timestamp"
+AttestationsRoute->>AuthLimiter : "Apply auth rate limiting"
+AuthLimiter->>AttestationsRoute : "Allow request (strict limit)"
 AttestationsRoute->>AttestationsRoute : "Check timestamp within 5 minutes window"
 AttestationsRoute->>Crypto : "Verify Ed25519 signature with message format"
 AttestationsRoute->>DB : "createFlag(reporterPubkey, reason, evidence)"
@@ -200,7 +216,7 @@ AttestationsRoute-->>Client : "Flag submitted with auto-flagging if threshold re
 ```
 
 **Diagram sources**
-- [routes/verify.js:1-115](file://backend/src/routes/verify.js#L1-L115)
+- [routes/verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
 - [routes/attestations.js:76-180](file://backend/src/routes/attestations.js#L76-L180)
 - [services/pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
 - [models/queries.js:207-321](file://backend/src/models/queries.js#L207-L321)
@@ -326,16 +342,28 @@ AttestationsRoute-->>Client : "flag result"
 - [models/queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
 
 ### Enhanced Rate Limiting Middleware Configuration
-- Default rate limiter: 100 requests per 15 minutes per IP.
-- Authentication-specific limiter: 20 requests per 15 minutes per IP for sensitive endpoints.
-- Standard headers enabled; legacy headers disabled.
-- Custom handler logs exceeded limits and returns JSON with status 429.
-- Enhanced security for flag submissions with stricter rate limiting on `/agents/:pubkey/flag`.
+- **Updated** Enhanced rate limiting architecture with dedicated authLimiter middleware:
+  - Default rate limiter: 100 requests per 15 minutes per IP for general endpoints.
+  - Authentication-specific limiter: 20 requests per 15 minutes per IP for sensitive endpoints.
+  - Strict limiter for auth endpoints: 20 requests per 15 minutes with custom error message.
+  - Standard headers enabled; legacy headers disabled.
+  - Custom handler logs exceeded limits and returns JSON with status 429.
+  - Enhanced security for sensitive operations with stricter rate limiting on authentication endpoints.
+
+- **Updated** Implementation across all sensitive endpoints:
+  - `/verify/challenge` - Uses authLimiter for challenge issuance
+  - `/verify/response` - Uses authLimiter for response verification
+  - `/register` - Uses authLimiter for agent registration
+  - `/agents/:pubkey/flag` - Uses authLimiter for flag submissions
+  - `/agents/:pubkey/update` - Uses authLimiter for agent updates
 
 ```mermaid
 flowchart TD
-Req["Incoming Request"] --> Limiter["Apply Rate Limiter"]
-Limiter --> Allowed{"Within Limits?"}
+Req["Incoming Request"] --> CheckEndpoint{"Endpoint Type?"}
+CheckEndpoint --> |General| DefaultLimiter["Apply Default Limiter<br/>100 requests/15min/IP"]
+CheckEndpoint --> |Auth| AuthLimiter["Apply Auth Limiter<br/>20 requests/15min/IP"]
+DefaultLimiter --> Allowed{"Within Limits?"}
+AuthLimiter --> Allowed
 Allowed --> |Yes| Next["Proceed to Route Handler"]
 Allowed --> |No| Log["Log Warning"]
 Log --> Respond["Return 429 JSON"]
@@ -349,9 +377,10 @@ Respond --> End
 **Section sources**
 - [middleware/rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [server.js:66](file://backend/server.js#L66)
-- [routes/verify.js:20, 55](file://backend/src/routes/verify.js#L20,L55)
+- [routes/verify.js:18, 57](file://backend/src/routes/verify.js#L18,L57)
 - [routes/register.js:59](file://backend/src/routes/register.js#L59)
 - [routes/attestations.js:80](file://backend/src/routes/attestations.js#L80)
+- [routes/agents.js:124](file://backend/src/routes/agents.js#L124)
 
 ### Enhanced Input Validation Strategies and SQL Injection Prevention
 - Enhanced input validation:
@@ -531,7 +560,7 @@ Queries --> DB : "executes"
 The system relies on several key dependencies for security:
 - helmet: Provides security headers.
 - cors: Controls cross-origin requests.
-- express-rate-limit: Enforces rate limits.
+- express-rate-limit: Enforces rate limits with configurable limits.
 - tweetnacl and bs58: Ed25519 signature verification and base58 encoding/decoding.
 - axios: External API communication with timeouts.
 - pg and ioredis: Database and Redis connectivity.
@@ -565,17 +594,19 @@ FlagModal --> BS58
 - [server.js:25-31](file://backend/server.js#L25-L31)
 
 ## Performance Considerations
-- Rate limiting reduces load and mitigates abuse.
+- Enhanced rate limiting reduces load and mitigates abuse while maintaining appropriate performance for general endpoints.
 - Parameterized queries minimize SQL overhead and risk.
 - Redis caching reduces database load for frequently accessed data.
 - Helmet and CORS are lightweight middleware with minimal performance impact.
 - Frontend cryptographic operations are performed client-side to reduce server load.
 - Timestamp validation occurs in memory for fast validation without database queries.
+- **Updated** Dedicated authLimiter provides stricter limits for sensitive operations while allowing higher throughput for general endpoints.
 
 ## Troubleshooting Guide
 - Rate limit exceeded:
   - Check logs for warnings and adjust limits if necessary.
   - Review client-side retry logic.
+  - **Updated** Differentiate between general endpoint limits (100/15min) and authentication limits (20/15min).
 - Signature verification failures:
   - Ensure base58 encoding/decoding is correct.
   - Verify challenge string composition and nonce usage.
@@ -598,13 +629,13 @@ FlagModal --> BS58
 - [frontend/src/components/FlagModal.jsx:141-146](file://frontend/src/components/FlagModal.jsx#L141-L146)
 
 ## Conclusion
-The AgentID system implements robust authentication and authorization through Ed25519-based challenge-response with enhanced timestamp validation, prevents replay attacks with nonces, expiration, and time-based validation, and secures API access with rate limiting and security headers. The enhanced flag submission system provides cryptographic proof-of-ownership through mandatory reporterPubkey, signature verification, and timestamp validation. Data integrity is maintained via parameterized queries, while external integrations are handled securely with timeouts and error logging. The architecture balances security, performance, and maintainability, providing a strong foundation for trust verification in the Bags ecosystem with comprehensive cryptographic protections.
+The AgentID system implements robust authentication and authorization through Ed25519-based challenge-response with enhanced timestamp validation, prevents replay attacks with nonces, expiration, and time-based validation, and secures API access with enhanced rate limiting and security headers. The new dual-tier rate limiting architecture provides dedicated authentication endpoints with stricter limits while maintaining appropriate performance for general operations. The enhanced flag submission system provides cryptographic proof-of-ownership through mandatory reporterPubkey, signature verification, and timestamp validation. Data integrity is maintained via parameterized queries, while external integrations are handled securely with timeouts and error logging. The architecture balances security, performance, and maintainability, providing a strong foundation for trust verification in the Bags ecosystem with comprehensive cryptographic protections and enhanced security measures for sensitive operations.
 
 ## Appendices
 - Threat Modeling:
   - Spoofing: Mitigated by Ed25519 private key requirement and cryptographic proof-of-ownership.
   - Replay: Mitigated by nonce, timestamp, expiration, one-time use, and timestamp window validation.
-  - DDoS: Mitigated by rate limiting and timeouts.
+  - DDoS: Mitigated by enhanced rate limiting with dedicated authLimiter for sensitive endpoints.
   - Man-in-the-middle: Mitigated by HTTPS and helmet security headers.
   - Frontend attacks: Mitigated by client-side cryptographic operations and input validation.
 - Security Audit Procedures:
@@ -612,9 +643,11 @@ The AgentID system implements robust authentication and authorization through Ed
   - Penetration testing of external API integrations.
   - Database and Redis security hardening.
   - Cryptographic signature validation testing.
+  - **Updated** Rate limiting effectiveness testing for both general and authentication endpoints.
 - Incident Response Protocols:
   - Immediate rate limit increase for affected IPs.
   - External API outage handling with fallbacks.
   - Database and Redis connectivity monitoring with alerts.
   - Cryptographic key rotation procedures.
   - Frontend security monitoring for signature validation failures.
+  - **Updated** Authentication endpoint monitoring and alerting for rate limit bypass attempts.

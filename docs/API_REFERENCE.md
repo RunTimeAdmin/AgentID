@@ -1,7 +1,7 @@
 # AgentID API Reference
 
 **Version:** 1.0.0  
-**Base URL:** `https://your-domain.io` (configurable via `AGENTID_BASE_URL`)  
+**Base URL:** `https://agentid.provenanceai.network` (configurable via `AGENTID_BASE_URL`)  
 **Author:** David Cooper (CCIE #14019)
 
 ---
@@ -230,7 +230,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```bash
-curl -X POST https://your-domain.io/register \
+curl -X POST https://agentid.provenanceai.network/register \
   -H "Content-Type: application/json" \
   -d '{
     "pubkey": "AgentPubkey111111111111111111111111111111111",
@@ -307,7 +307,7 @@ AGENTID-UPDATE:{pubkey}:{timestamp}
 
 **Example Request:**
 ```bash
-curl -X PUT https://your-domain.io/agents/AgentPubkey111111111111111111111111111111111/update \
+curl -X PUT https://agentid.provenanceai.network/agents/AgentPubkey111111111111111111111111111111111/update \
   -H "Content-Type: application/json" \
   -d '{
     "signature": "Base58Signature...",
@@ -361,7 +361,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```bash
-curl -X POST https://your-domain.io/verify/challenge \
+curl -X POST https://agentid.provenanceai.network/verify/challenge \
   -H "Content-Type: application/json" \
   -d '{"pubkey": "AgentPubkey111111111111111111111111111111111"}'
 ```
@@ -403,7 +403,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```bash
-curl -X POST https://your-domain.io/verify/response \
+curl -X POST https://agentid.provenanceai.network/verify/response \
   -H "Content-Type: application/json" \
   -d '{
     "pubkey": "AgentPubkey111111111111111111111111111111111",
@@ -448,7 +448,7 @@ Retrieve trust badge data as JSON.
   "successRate": 0.94,
   "capabilities": ["trading", "analytics"],
   "tokenMint": "TokenMint1111111111111111111111111111111111",
-  "widgetUrl": "https://your-domain.io/widget/AgentPubkey111111111111111111111111111111111"
+  "widgetUrl": "https://agentid.provenanceai.network/widget/AgentPubkey111111111111111111111111111111111"
 }
 ```
 
@@ -466,7 +466,7 @@ Retrieve trust badge data as JSON.
 
 **Example Request:**
 ```bash
-curl https://your-domain.io/badge/AgentPubkey111111111111111111111111111111111
+curl https://agentid.provenanceai.network/badge/AgentPubkey111111111111111111111111111111111
 ```
 
 ---
@@ -497,12 +497,12 @@ Retrieve trust badge as an SVG image.
 
 **Example Request:**
 ```bash
-curl https://your-domain.io/badge/AgentPubkey111111111111111111111111111111111/svg
+curl https://agentid.provenanceai.network/badge/AgentPubkey111111111111111111111111111111111/svg
 ```
 
 **Markdown Usage:**
 ```markdown
-![Agent Trust Badge](https://your-domain.io/badge/AgentPubkey111111111111111111111111111111111/svg)
+![Agent Trust Badge](https://agentid.provenanceai.network/badge/AgentPubkey111111111111111111111111111111111/svg)
 ```
 
 ---
@@ -555,7 +555,7 @@ Retrieve full reputation breakdown with 5-factor analysis.
 
 **Example Request:**
 ```bash
-curl https://your-domain.io/reputation/AgentPubkey111111111111111111111111111111111
+curl https://agentid.provenanceai.network/reputation/AgentPubkey111111111111111111111111111111111
 ```
 
 ---
@@ -609,10 +609,10 @@ List registered agents with optional filters.
 **Example Request:**
 ```bash
 # List all agents
-curl https://your-domain.io/agents
+curl https://agentid.provenanceai.network/agents
 
 # Filter by capability with pagination
-curl "https://your-domain.io/agents?capability=trading&limit=10&offset=0"
+curl "https://agentid.provenanceai.network/agents?capability=trading&limit=10&offset=0"
 ```
 
 ---
@@ -668,7 +668,7 @@ Get detailed information for a single agent including reputation.
 
 **Example Request:**
 ```bash
-curl https://your-domain.io/agents/AgentPubkey111111111111111111111111111111111
+curl https://agentid.provenanceai.network/agents/AgentPubkey111111111111111111111111111111111
 ```
 
 ---
@@ -713,7 +713,7 @@ A2A (Agent-to-Agent) discovery - find agents by capability.
 
 **Example Request:**
 ```bash
-curl "https://your-domain.io/discover?capability=analytics"
+curl "https://agentid.provenanceai.network/discover?capability=analytics"
 ```
 
 ---
@@ -760,7 +760,7 @@ Record a successful or failed action for an agent.
 
 **Example Request:**
 ```bash
-curl -X POST https://your-domain.io/agents/AgentPubkey111111111111111111111111111111111/attest \
+curl -X POST https://agentid.provenanceai.network/agents/AgentPubkey111111111111111111111111111111111/attest \
   -H "Content-Type: application/json" \
   -d '{
     "success": true,
@@ -815,7 +815,7 @@ Flag suspicious behavior for an agent.
 
 **Example Request:**
 ```bash
-curl -X POST https://your-domain.io/agents/AgentPubkey111111111111111111111111111111111/flag \
+curl -X POST https://agentid.provenanceai.network/agents/AgentPubkey111111111111111111111111111111111/flag \
   -H "Content-Type: application/json" \
   -d '{
     "reporterPubkey": "ReporterPubkey111111111111111111111111111111",
@@ -854,7 +854,7 @@ Retrieve action statistics for an agent.
 
 **Example Request:**
 ```bash
-curl https://your-domain.io/agents/AgentPubkey111111111111111111111111111111111/attestations
+curl https://agentid.provenanceai.network/agents/AgentPubkey111111111111111111111111111111111/attestations
 ```
 
 ---
@@ -895,7 +895,7 @@ Retrieve all flags for an agent.
 
 **Example Request:**
 ```bash
-curl https://your-domain.io/agents/AgentPubkey111111111111111111111111111111111/flags
+curl https://agentid.provenanceai.network/agents/AgentPubkey111111111111111111111111111111111/flags
 ```
 
 ---
@@ -933,13 +933,13 @@ The widget includes:
 
 **Example Request:**
 ```bash
-curl https://your-domain.io/widget/AgentPubkey111111111111111111111111111111111
+curl https://agentid.provenanceai.network/widget/AgentPubkey111111111111111111111111111111111
 ```
 
 **iframe Embed:**
 ```html
 <iframe 
-  src="https://your-domain.io/widget/AgentPubkey111111111111111111111111111111111"
+  src="https://agentid.provenanceai.network/widget/AgentPubkey111111111111111111111111111111111"
   width="400"
   height="300"
   frameborder="0"

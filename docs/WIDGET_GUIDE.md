@@ -32,7 +32,7 @@ The simplest integration method. Add this HTML to any page:
 
 ```html
 <iframe 
-  src="https://your-domain.io/widget/{AGENT_PUBKEY}"
+  src="https://agentid.provenanceai.network/widget/{AGENT_PUBKEY}"
   width="400"
   height="300"
   frameborder="0"
@@ -48,7 +48,7 @@ Replace `{AGENT_PUBKEY}` with your agent's public key.
 ```html
 <!-- Example: Trading Agent Widget -->
 <iframe 
-  src="https://your-domain.io/widget/AgentPubkey111111111111111111111111111111111"
+  src="https://agentid.provenanceai.network/widget/AgentPubkey111111111111111111111111111111111"
   width="400"
   height="300"
   frameborder="0"
@@ -83,7 +83,7 @@ The widget endpoint accepts these query parameters:
 **Example with parameters:**
 ```html
 <iframe 
-  src="https://your-domain.io/widget/{PUBKEY}?theme=dark&compact=true"
+  src="https://agentid.provenanceai.network/widget/{PUBKEY}?theme=dark&compact=true"
   width="320"
   height="200"
   frameborder="0"
@@ -97,7 +97,7 @@ The iframe can be styled via the container:
 ```html
 <div class="widget-container">
   <iframe 
-    src="https://your-domain.io/widget/{PUBKEY}"
+    src="https://agentid.provenanceai.network/widget/{PUBKEY}"
     width="400"
     height="300"
     frameborder="0"
@@ -134,7 +134,7 @@ For applications requiring complete control over the widget appearance, you can 
 
 ```javascript
 async function fetchBadgeData(pubkey) {
-  const response = await fetch(`https://your-domain.io/badge/${pubkey}`);
+  const response = await fetch(`https://agentid.provenanceai.network/badge/${pubkey}`);
   if (!response.ok) {
     throw new Error('Failed to fetch badge data');
   }
@@ -164,7 +164,7 @@ const badgeData = await fetchBadgeData('AgentPubkey11111111111111111111111111111
   "successRate": 0.94,
   "capabilities": ["trading", "analytics"],
   "tokenMint": "TokenMint1111111111111111111111111111111111",
-  "widgetUrl": "https://your-domain.io/widget/AgentPubkey111111111111111111111111111111111"
+  "widgetUrl": "https://agentid.provenanceai.network/widget/AgentPubkey111111111111111111111111111111111"
 }
 ```
 
@@ -208,7 +208,7 @@ function AgentIDWidget({ pubkey }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`https://your-domain.io/badge/${pubkey}`)
+    fetch(`https://agentid.provenanceai.network/badge/${pubkey}`)
       .then(res => res.json())
       .then(data => {
         setData(data);
@@ -217,7 +217,7 @@ function AgentIDWidget({ pubkey }) {
 
     // Auto-refresh every 60 seconds
     const interval = setInterval(() => {
-      fetch(`https://your-domain.io/badge/${pubkey}`)
+      fetch(`https://agentid.provenanceai.network/badge/${pubkey}`)
         .then(res => res.json())
         .then(setData);
     }, 60000);
@@ -270,7 +270,7 @@ For dynamic applications, use the JavaScript API to fetch badge data:
 
 ```javascript
 class AgentIDWidget {
-  constructor(baseUrl = 'https://your-domain.io') {
+  constructor(baseUrl = 'https://agentid.provenanceai.network') {
     this.baseUrl = baseUrl;
   }
 
@@ -352,7 +352,7 @@ export default {
 For GitHub README, documentation sites, or static pages:
 
 ```markdown
-![AgentID Trust Badge](https://your-domain.io/badge/{PUBKEY}/svg)
+![AgentID Trust Badge](https://agentid.provenanceai.network/badge/{PUBKEY}/svg)
 ```
 
 ### Markdown with Link
@@ -360,15 +360,15 @@ For GitHub README, documentation sites, or static pages:
 Link the badge to your agent's profile:
 
 ```markdown
-[![AgentID Trust Badge](https://your-domain.io/badge/{PUBKEY}/svg)](https://your-domain.io/agents/{PUBKEY})
+[![AgentID Trust Badge](https://agentid.provenanceai.network/badge/{PUBKEY}/svg)](https://agentid.provenanceai.network/agents/{PUBKEY})
 ```
 
 ### HTML with Alt Text
 
 ```html
-<a href="https://your-domain.io/agents/{PUBKEY}">
+<a href="https://agentid.provenanceai.network/agents/{PUBKEY}">
   <img 
-    src="https://your-domain.io/badge/{PUBKEY}/svg" 
+    src="https://agentid.provenanceai.network/badge/{PUBKEY}/svg" 
     alt="AgentID Trust Score: 75/100 - Verified Agent"
     width="320"
     height="80"
@@ -381,7 +381,7 @@ Link the badge to your agent's profile:
 ```markdown
 # My Trading Agent
 
-[![AgentID](https://your-domain.io/badge/AgentPubkey111111111111111111111111111111111/svg)](https://your-domain.io/agents/AgentPubkey111111111111111111111111111111111)
+[![AgentID](https://agentid.provenanceai.network/badge/AgentPubkey111111111111111111111111111111111/svg)](https://agentid.provenanceai.network/agents/AgentPubkey111111111111111111111111111111111)
 
 An automated trading agent for Solana DeFi protocols.
 
@@ -402,7 +402,7 @@ An automated trading agent for Solana DeFi protocols.
 **Solution:**
 1. Ensure `CORS_ORIGIN` environment variable includes your domain:
    ```
-   CORS_ORIGIN=https://your-frontend.com
+   CORS_ORIGIN=https://agentid.provenanceai.network
    ```
 2. For multiple origins, use a comma-separated list:
    ```
@@ -422,7 +422,7 @@ An automated trading agent for Solana DeFi protocols.
 2. Check browser console for 404 errors
 3. Ensure the agent is registered:
    ```bash
-   curl https://your-domain.io/badge/{PUBKEY}
+   curl https://agentid.provenanceai.network/badge/{PUBKEY}
    ```
 4. Check that the iframe dimensions are sufficient (min 320x200)
 
@@ -435,7 +435,7 @@ An automated trading agent for Solana DeFi protocols.
 2. Badge data is cached for 60 seconds (configurable via `BADGE_CACHE_TTL`)
 3. Force refresh by adding cache-buster:
    ```html
-   <iframe src="https://your-domain.io/widget/{PUBKEY}?t=123456"></iframe>
+   <iframe src="https://agentid.provenanceai.network/widget/{PUBKEY}?t=123456"></iframe>
    ```
 
 ### SVG Not Rendering
@@ -556,9 +556,9 @@ Returns the badge as an SVG image (320x80px).
 
 For integration support or feature requests:
 
-- **Documentation:** https://your-domain.io/docs
-- **API Status:** https://your-domain.io/health
-- **GitHub Issues:** https://github.com/your-org/agentid/issues
+- **Documentation:** https://agentid.provenanceai.network/docs
+- **API Status:** https://agentid.provenanceai.network/health
+- **GitHub Issues:** https://github.com/RunTimeAdmin/AgentID/issues
 
 ---
 

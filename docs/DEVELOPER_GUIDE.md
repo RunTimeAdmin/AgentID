@@ -677,13 +677,13 @@ pm2 startup
 ```nginx
 server {
     listen 80;
-    server_name api.agentid.io;
+    server_name agentid.provenanceai.network;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name api.agentid.io;
+    server_name agentid.provenanceai.network;
 
     ssl_certificate /etc/letsencrypt/live/api.agentid.io/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/api.agentid.io/privkey.pem;
@@ -729,13 +729,13 @@ Nginx static file configuration:
 ```nginx
 server {
     listen 80;
-    server_name agentid.io;
+    server_name agentid.provenanceai.network;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name agentid.io;
+    server_name agentid.provenanceai.network;
 
     ssl_certificate /etc/letsencrypt/live/agentid.io/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/agentid.io/privkey.pem;
