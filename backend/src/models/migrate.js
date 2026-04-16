@@ -61,6 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_identities_bags_score ON agent_identities(b
 CREATE INDEX IF NOT EXISTS idx_agent_verifications_pubkey ON agent_verifications(pubkey);
 CREATE INDEX IF NOT EXISTS idx_agent_flags_pubkey ON agent_flags(pubkey);
 CREATE INDEX IF NOT EXISTS idx_agent_flags_resolved ON agent_flags(resolved);
+CREATE INDEX IF NOT EXISTS idx_agent_flags_pubkey_resolved ON agent_flags(pubkey, resolved);
 `;
 
 async function migrate() {

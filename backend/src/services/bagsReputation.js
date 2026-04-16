@@ -54,7 +54,6 @@ async function computeBagsScore(pubkey) {
     // 3. Registration Age (20 points max)
     let ageScore = 0;
     try {
-      const agent = await queries.getAgent(pubkey);
       if (agent && agent.registered_at) {
         const ageDays = Math.floor((Date.now() - new Date(agent.registered_at)) / 86400000);
         ageScore = Math.min(20, ageDays);

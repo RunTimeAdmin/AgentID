@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
   const [reason, setReason] = useState('');
   const [evidence, setEvidence] = useState('');
+  const [reporterPubkey, setReporterPubkey] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -34,10 +35,12 @@ export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
       await onSubmit({
         reason: reason.trim(),
         evidence: parsedEvidence,
+        reporterPubkey: reporterPubkey.trim() || 'anonymous',
       });
       // Reset form on success
       setReason('');
       setEvidence('');
+      setReporterPubkey('');
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to submit flag. Please try again.');
@@ -86,6 +89,25 @@ export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
               <div className="font-mono text-sm text-[var(--text-secondary)] break-all">
                 {agentPubkey}
               </div>
+            </div>
+
+            {/* Reporter Pubkey Input */}
+            <div>
+              <label htmlFor="flag-reporter" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                Your Wallet Address <span className="text-[var(--text-muted)] font-normal">(optional)</span>
+              </label>
+              <input
+                id="flag-reporter"
+                type="text"
+                value={reporterPubkey}
+                onChange={(e) => setReporterPubkey(e.target.value)}
+                placeholder="Paste your Solana wallet address (pubkey)..."
+                className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] transition-colors font-mono text-sm"
+                disabled={isSubmitting}
+              />
+              <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                Optional: Provide your wallet address to identify yourself as the reporter. Leave blank to remain anonymous.
+              </p>
             </div>
 
             {/* Reason Input */}

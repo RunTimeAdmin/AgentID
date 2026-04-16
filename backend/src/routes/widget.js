@@ -7,23 +7,9 @@ const express = require('express');
 const { getWidgetHTML } = require('../services/badgeBuilder');
 const { getAgent } = require('../models/queries');
 const { defaultLimiter } = require('../middleware/rateLimit');
+const { escapeHtml } = require('../utils/transform');
 
 const router = express.Router();
-
-/**
- * Escape HTML special characters to prevent XSS
- * @param {string} text - Input text
- * @returns {string} - Escaped text
- */
-function escapeHtml(text) {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
 /**
  * GET /widget/:pubkey

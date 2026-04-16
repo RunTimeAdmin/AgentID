@@ -10,9 +10,6 @@ const { authLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
-// Timestamp window for replay protection (5 minutes in milliseconds)
-const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000;
-
 /**
  * POST /verify/challenge
  * Issue a PKI challenge for an agent

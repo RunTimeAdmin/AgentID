@@ -214,7 +214,10 @@ export default function AgentDetail() {
   const handleFlagSubmit = async (flagData) => {
     setFlagSubmitting(true);
     try {
-      await flagAgent(pubkey, flagData);
+      await flagAgent(pubkey, {
+        ...flagData,
+        reporterPubkey: flagData.reporterPubkey || 'anonymous',  // TODO: Replace with connected wallet pubkey
+      });
       // Refresh flags after submission
       const flagsData = await getFlags(pubkey);
       setFlags(flagsData.flags || []);
@@ -280,7 +283,8 @@ export default function AgentDetail() {
     );
   }
 
-  const combinedHistory = [
+  // Note: flagHistory only contains flags since attestations are shown as aggregate stats elsewhere
+  const flagHistory = [
     ...flags.map((f) => ({ ...f, type: 'flag' })),
   ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
@@ -465,17 +469,17 @@ export default function AgentDetail() {
             </div>
           )}
 
-          {/* Attestation History */}
-          {combinedHistory.length > 0 && (
+          {/* Flag History */}
+          {flagHistory.length > 0 && (
             <div className="glass rounded-2xl p-6 border border-[var(--border-subtle)]">
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
                 Activity History
                 <span className="ml-2 text-sm font-normal text-[var(--text-muted)]">
-                  ({combinedHistory.length})
+                  ({flagHistory.length})
                 </span>
               </h3>
               <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                {combinedHistory.slice(0, 10).map((item, index) => (
+                {flagHistory.slice(0, 10).map((item, index) => (
                   <HistoryItem key={index} item={item} type={item.type} />
                 ))}
               </div>

@@ -356,12 +356,31 @@ async function discoverAgents({ capability, limit = 20 } = {}) {
   return result.rows;
 }
 
+async function countAgents({ status, capability } = {}) {
+  let queryStr = 'SELECT COUNT(*) FROM agent_identities WHERE 1=1';
+  const params = [];
+  let paramIndex = 1;
+  
+  if (status) {
+    queryStr += ` AND status = $${paramIndex++}`;
+    params.push(status);
+  }
+  if (capability) {
+    queryStr += ` AND capability_set @> $${paramIndex++}::jsonb`;
+    params.push(JSON.stringify([capability]));
+  }
+  
+  const result = await query(queryStr, params);
+  return parseInt(result.rows[0].count, 10);
+}
+
 module.exports = {
   // Agent Identity queries
   createAgent,
   getAgent,
   updateAgent,
   listAgents,
+  countAgents,
   updateAgentStatus,
   updateLastVerified,
   updateBagsScore,

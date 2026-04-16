@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
+// NOTE: The widget intentionally uses its own axios instance (not the shared lib/api.js)
+// because it's built as a standalone bundle for iframe embedding and cannot share imports
+// with the main app.
+const API_BASE_URL = window.__AGENTID_API_URL__ || import.meta.env.VITE_AGENTID_API_URL || '/api';
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },

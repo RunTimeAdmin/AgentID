@@ -6,7 +6,7 @@
 const express = require('express');
 const nacl = require('tweetnacl');
 const bs58 = require('bs58');
-const { getAgent, listAgents, discoverAgents, updateAgent } = require('../models/queries');
+const { getAgent, listAgents, countAgents, discoverAgents, updateAgent } = require('../models/queries');
 const { computeBagsScore } = require('../services/bagsReputation');
 const { defaultLimiter, authLimiter } = require('../middleware/rateLimit');
 const { transformAgent, transformAgents } = require('../utils/transform');
@@ -40,8 +40,8 @@ router.get('/agents', defaultLimiter, async (req, res, next) => {
       offset: parsedOffset
     });
 
-    // Get total count for pagination (simplified - in production could use COUNT query)
-    const total = agents.length;
+    // Get total count for pagination
+    const total = await countAgents({ status, capability });
 
     return res.status(200).json({
       agents: transformAgents(agents),

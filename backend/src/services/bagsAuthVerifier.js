@@ -22,7 +22,7 @@ async function initBagsAuth(pubkey) {
     {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.bagsApiKey}`
+        'x-api-key': config.bagsApiKey
       },
       timeout: 10000
     }
@@ -62,14 +62,20 @@ function verifyBagsSignature(message, signature, pubkey) {
  * @param {string} signature - The base58-encoded signature
  * @returns {Promise<string>} - The API key ID (reference identifier for tracking)
  */
-async function completeBagsAuth(pubkey, signature) {
+async function completeBagsAuth(pubkey, signature, message) {
+  // Verify signature before calling Bags callback
+  const isValid = verifyBagsSignature(message, signature, pubkey);
+  if (!isValid) {
+    throw new Error('Invalid signature');
+  }
+
   const response = await axios.post(
     `${BAGS_API_BASE}/auth/callback`,
     { address: pubkey, signature },
     {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.bagsApiKey}`
+        'x-api-key': config.bagsApiKey
       },
       timeout: 10000
     }

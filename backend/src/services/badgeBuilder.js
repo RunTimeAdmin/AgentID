@@ -7,6 +7,7 @@ const queries = require('../models/queries');
 const { computeBagsScore } = require('./bagsReputation');
 const { getCache, setCache } = require('../models/redis');
 const config = require('../config');
+const { escapeHtml } = require('../utils/transform');
 
 /**
  * Get badge data as JSON with caching
@@ -51,8 +52,7 @@ async function getBadgeJSON(pubkey) {
       label = 'UNVERIFIED';
     }
 
-    // Build base URL
-    const baseUrl = config.saidGatewayUrl.replace('/agents', '').replace('/v1', '');
+    const widgetUrl = `${config.agentIdBaseUrl}/widget/${pubkey}`;
 
     const result = {
       pubkey,
@@ -70,7 +70,7 @@ async function getBadgeJSON(pubkey) {
       successRate: successRate,
       capabilities: agent.capability_set || [],
       tokenMint: agent.token_mint,
-      widgetUrl: `${baseUrl}/widget/${pubkey}`
+      widgetUrl
     };
 
     // Cache the result
@@ -472,21 +472,6 @@ async function getWidgetHTML(pubkey) {
   } catch (error) {
     throw new Error(`Failed to generate widget HTML: ${error.message}`);
   }
-}
-
-/**
- * Escape HTML special characters
- * @param {string} text - Input text
- * @returns {string} - Escaped text
- */
-function escapeHtml(text) {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
 
 /**

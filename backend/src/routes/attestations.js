@@ -74,6 +74,10 @@ router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => 
 /**
  * POST /agents/:pubkey/flag
  * Flag suspicious behavior
+ * 
+ * TODO: Add signature verification for reporterPubkey to ensure proof-of-ownership.
+ * The reporter should sign a message containing the pubkey and reason to prevent
+ * spoofing of reporter identity.
  */
 router.post('/agents/:pubkey/flag', defaultLimiter, async (req, res, next) => {
   try {
