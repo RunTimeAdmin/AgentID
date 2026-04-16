@@ -328,8 +328,8 @@ export default function Discover() {
           <div className="space-y-4">
             {results.map((agent, index) => (
               <Link
-                key={agent.pubkey}
-                to={`/agents/${agent.pubkey}`}
+                key={agent.agentId || agent.agent_id || agent.id}
+                to={`/agents/${agent.agentId || agent.agent_id || agent.id}`}
                 className="block group"
               >
                 <div className="glass rounded-xl p-5 border border-[var(--border-subtle)] transition-all duration-300 hover:border-[var(--accent-cyan)]/50 hover:shadow-lg hover:shadow-[var(--accent-cyan)]/10">

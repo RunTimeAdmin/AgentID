@@ -21,12 +21,12 @@ const bs58 = require('bs58');
 const router = express.Router();
 
 /**
- * POST /agents/:pubkey/attest
+ * POST /agents/:agentId/attest
  * Record a successful/failed action
  */
-router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => {
+router.post('/agents/:agentId/attest', defaultLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
     const { success, action } = req.body;
 
     // Validate success is boolean
@@ -37,21 +37,21 @@ router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => 
     }
 
     // Check agent exists
-    const agent = await getAgent(pubkey);
+    const agent = await getAgent(agentId);
     if (!agent) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey
+        agentId
       });
     }
 
     // Increment action counters
-    const updatedAgent = await incrementActions(pubkey, success);
+    const updatedAgent = await incrementActions(agentId, success);
 
     // If success, refresh and store the BAGS score
     if (success) {
       try {
-        await refreshAndStoreScore(pubkey);
+        await refreshAndStoreScore(agentId);
       } catch (scoreError) {
         // Log but don't fail the request
         console.warn('Failed to refresh score after successful action:', scoreError.message);
@@ -60,7 +60,8 @@ router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => 
 
     const transformedAgent = transformAgent(updatedAgent);
     return res.status(200).json({
-      pubkey,
+      agentId,
+      pubkey: agent.pubkey,
       success,
       action: action || null,
       totalActions: transformedAgent.totalActions,
@@ -74,12 +75,12 @@ router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => 
 });
 
 /**
- * POST /agents/:pubkey/flag
+ * POST /agents/:agentId/flag
  * Flag suspicious behavior with cryptographic proof-of-ownership
  */
-router.post('/agents/:pubkey/flag', authLimiter, async (req, res, next) => {
+router.post('/agents/:agentId/flag', authLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
     const { reporterPubkey, signature, timestamp, reason, evidence } = req.body;
 
     // Validate required fields
@@ -123,8 +124,17 @@ router.post('/agents/:pubkey/flag', authLimiter, async (req, res, next) => {
       });
     }
 
-    // Construct the message to verify
-    const message = `AGENTID-FLAG:${pubkey}:${reporterPubkey}:${timestamp}`;
+    // Check agent exists
+    const agent = await getAgent(agentId);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        agentId
+      });
+    }
+
+    // Construct the message to verify (uses agentId instead of pubkey)
+    const message = `AGENTID-FLAG:${agentId}:${reporterPubkey}:${timestamp}`;
 
     // Verify the Ed25519 signature
     let isValid = false;
@@ -146,31 +156,24 @@ router.post('/agents/:pubkey/flag', authLimiter, async (req, res, next) => {
       });
     }
 
-    // Check agent exists
-    const agent = await getAgent(pubkey);
-    if (!agent) {
-      return res.status(404).json({
-        error: 'Agent not found',
-        pubkey
-      });
-    }
-
     // Create the flag
     const flag = await createFlag({
-      pubkey,
+      agentId,
+      pubkey: agent.pubkey,
       reporterPubkey,
       reason,
       evidence: evidence || null
     });
 
     // Check if unresolved flags >= 3, auto-update status to 'flagged'
-    const unresolvedCount = await getUnresolvedFlagCount(pubkey);
+    const unresolvedCount = await getUnresolvedFlagCount(agentId);
     if (unresolvedCount >= 3 && agent.status !== 'flagged') {
-      await updateAgentStatus(pubkey, 'flagged', `Auto-flagged: ${unresolvedCount} unresolved flags`);
+      await updateAgentStatus(agentId, 'flagged', `Auto-flagged: ${unresolvedCount} unresolved flags`);
     }
 
     return res.status(201).json({
       flag,
+      agentId,
       unresolved_flags: unresolvedCount,
       auto_flagged: unresolvedCount >= 3 && agent.status !== 'flagged'
     });
@@ -180,24 +183,25 @@ router.post('/agents/:pubkey/flag', authLimiter, async (req, res, next) => {
 });
 
 /**
- * GET /agents/:pubkey/attestations
+ * GET /agents/:agentId/attestations
  * Return agent action stats
  */
-router.get('/agents/:pubkey/attestations', defaultLimiter, async (req, res, next) => {
+router.get('/agents/:agentId/attestations', defaultLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
 
-    const agent = await getAgent(pubkey);
+    const agent = await getAgent(agentId);
     if (!agent) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey
+        agentId
       });
     }
 
     const transformedAgent = transformAgent(agent);
     return res.status(200).json({
-      pubkey,
+      agentId,
+      pubkey: agent.pubkey,
       totalActions: transformedAgent.totalActions,
       successfulActions: transformedAgent.successfulActions,
       failedActions: transformedAgent.failedActions,
@@ -209,26 +213,27 @@ router.get('/agents/:pubkey/attestations', defaultLimiter, async (req, res, next
 });
 
 /**
- * GET /agents/:pubkey/flags
+ * GET /agents/:agentId/flags
  * Return flags for an agent
  */
-router.get('/agents/:pubkey/flags', defaultLimiter, async (req, res, next) => {
+router.get('/agents/:agentId/flags', defaultLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
 
     // Check agent exists
-    const agent = await getAgent(pubkey);
+    const agent = await getAgent(agentId);
     if (!agent) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey
+        agentId
       });
     }
 
-    const flags = await getFlags(pubkey);
+    const flags = await getFlags(agentId);
 
     return res.status(200).json({
-      pubkey,
+      agentId,
+      pubkey: agent.pubkey,
       flags,
       count: flags.length
     });

@@ -10,15 +10,15 @@ const { getSAIDTrustScore } = require('./saidBinding.js');
 
 /**
  * Compute BAGS reputation score for an agent
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<Object>} - Score breakdown and total
  */
-async function computeBagsScore(pubkey) {
+async function computeBagsScore(agentId) {
   try {
-    // Get agent data for token_mint
-    const agent = await queries.getAgent(pubkey);
+    // Get agent data for token_mint and pubkey
+    const agent = await queries.getAgent(agentId);
     if (!agent) {
-      throw new Error(`Agent not found: ${pubkey}`);
+      throw new Error(`Agent not found: ${agentId}`);
     }
 
     // 1. Fee Activity (30 points max)
@@ -40,7 +40,7 @@ async function computeBagsScore(pubkey) {
     // 2. Success Rate (25 points max)
     let successRateScore = 0;
     try {
-      const actions = await queries.getAgentActions(pubkey);
+      const actions = await queries.getAgentActions(agentId);
       if (actions) {
         const total = actions.total || 0;
         const successful = actions.successful || 0;
@@ -66,7 +66,7 @@ async function computeBagsScore(pubkey) {
     let saidTrustScore = 0;
     let saidScore = 0;
     try {
-      const saidTrustData = await getSAIDTrustScore(pubkey);
+      const saidTrustData = await getSAIDTrustScore(agent.pubkey);
       saidScore = saidTrustData.score || 0;
       saidTrustScore = Math.floor((saidScore / 100) * 15);
     } catch (error) {
@@ -77,7 +77,7 @@ async function computeBagsScore(pubkey) {
     // 5. Community Verification (10 points max)
     let communityScore = 10;
     try {
-      const flagCount = await queries.getUnresolvedFlagCount(pubkey);
+      const flagCount = await queries.getUnresolvedFlagCount(agentId);
       if (flagCount === 0) {
         communityScore = 10;
       } else if (flagCount === 1) {
@@ -123,13 +123,13 @@ async function computeBagsScore(pubkey) {
 
 /**
  * Compute and store the BAGS score in the database
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<Object>} - Updated agent with new score
  */
-async function refreshAndStoreScore(pubkey) {
+async function refreshAndStoreScore(agentId) {
   try {
-    const scoreData = await computeBagsScore(pubkey);
-    const updatedAgent = await queries.updateBagsScore(pubkey, scoreData.score);
+    const scoreData = await computeBagsScore(agentId);
+    const updatedAgent = await queries.updateBagsScore(agentId, scoreData.score);
     return {
       agent: updatedAgent,
       scoreData: scoreData

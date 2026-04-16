@@ -165,7 +165,7 @@ function HistoryItem({ item, type }) {
 }
 
 export default function AgentDetail() {
-  const { pubkey } = useParams();
+  const { agentId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -184,11 +184,11 @@ export default function AgentDetail() {
 
       try {
         const [agentData, badgeData, repData, attestData, flagsData] = await Promise.all([
-          getAgent(pubkey).catch(() => null),
-          getBadge(pubkey).catch(() => null),
-          getReputation(pubkey).catch(() => null),
-          getAttestations(pubkey).catch(() => ({ attestations: [] })),
-          getFlags(pubkey).catch(() => ({ flags: [] })),
+          getAgent(agentId).catch(() => null),
+          getBadge(agentId).catch(() => null),
+          getReputation(agentId).catch(() => null),
+          getAttestations(agentId).catch(() => ({ attestations: [] })),
+          getFlags(agentId).catch(() => ({ flags: [] })),
         ]);
 
         if (!agentData) {
@@ -209,14 +209,14 @@ export default function AgentDetail() {
     };
 
     fetchData();
-  }, [pubkey]);
+  }, [agentId]);
 
   const handleFlagSubmit = async (flagData) => {
     setFlagSubmitting(true);
     try {
-      await flagAgent(pubkey, flagData);
+      await flagAgent(agentId, flagData);
       // Refresh flags after submission
-      const flagsData = await getFlags(pubkey);
+      const flagsData = await getFlags(agentId);
       setFlags(flagsData.flags || []);
       setIsFlagModalOpen(false);
     } catch (err) {
@@ -341,9 +341,9 @@ export default function AgentDetail() {
 
             <div className="flex items-center gap-3 text-sm">
               <span className="font-mono text-[var(--text-secondary)] bg-[var(--bg-tertiary)] px-3 py-1.5 rounded-lg">
-                {truncatePubkey(pubkey)}
+                {truncatePubkey(agent?.pubkey || agentId)}
               </span>
-              <CopyButton text={pubkey} label="pubkey" />
+              <CopyButton text={agent?.pubkey || agentId} label="pubkey" />
             </div>
           </div>
 
@@ -496,7 +496,7 @@ export default function AgentDetail() {
         isOpen={isFlagModalOpen}
         onClose={() => setIsFlagModalOpen(false)}
         onSubmit={handleFlagSubmit}
-        agentPubkey={pubkey}
+        agentPubkey={agent?.pubkey || agentId}
       />
     </div>
   );

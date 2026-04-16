@@ -11,29 +11,29 @@ const { escapeHtml, escapeXml } = require('../utils/transform');
 
 /**
  * Get badge data as JSON with caching
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<Object>} - Badge JSON data
  */
-async function getBadgeJSON(pubkey) {
+async function getBadgeJSON(agentId) {
   try {
     // Check cache first
-    const cacheKey = `badge:${pubkey}`;
+    const cacheKey = `badge:${agentId}`;
     const cached = await getCache(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
 
     // Get agent from DB
-    const agent = await queries.getAgent(pubkey);
+    const agent = await queries.getAgent(agentId);
     if (!agent) {
-      throw new Error(`Agent not found: ${pubkey}`);
+      throw new Error(`Agent not found: ${agentId}`);
     }
 
     // Compute reputation score
-    const reputation = await computeBagsScore(pubkey);
+    const reputation = await computeBagsScore(agentId);
 
     // Get action stats
-    const actions = await queries.getAgentActions(pubkey) || { total: 0, successful: 0, failed: 0 };
+    const actions = await queries.getAgentActions(agentId) || { total: 0, successful: 0, failed: 0 };
     const successRate = actions.total > 0 ? actions.successful / actions.total : 0;
 
     // Determine status and badge
@@ -56,10 +56,11 @@ async function getBadgeJSON(pubkey) {
     const tier = reputation.score >= config.verifiedThreshold ? 'verified' : 'standard';
     const tierColor = tier === 'verified' ? '#FFD700' : '#3B82F6';
 
-    const widgetUrl = `${config.agentIdBaseUrl}/widget/${pubkey}`;
+    const widgetUrl = `${config.agentIdBaseUrl}/widget/${agentId}`;
 
     const result = {
-      pubkey,
+      agentId,
+      pubkey: agent.pubkey,
       name: agent.name,
       status,
       badge,
@@ -90,12 +91,12 @@ async function getBadgeJSON(pubkey) {
 
 /**
  * Get badge as SVG string
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<string>} - SVG badge string
  */
-async function getBadgeSVG(pubkey) {
+async function getBadgeSVG(agentId) {
   try {
-    const badgeData = await getBadgeJSON(pubkey);
+    const badgeData = await getBadgeJSON(agentId);
 
     // Determine colors based on status and tier
     let bgColor, accentColor, iconColor, tierLabel, tierBadge;
@@ -214,12 +215,12 @@ async function getBadgeSVG(pubkey) {
 
 /**
  * Get widget HTML for iframe embedding
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<string>} - Complete HTML page string
  */
-async function getWidgetHTML(pubkey) {
+async function getWidgetHTML(agentId) {
   try {
-    const badgeData = await getBadgeJSON(pubkey);
+    const badgeData = await getBadgeJSON(agentId);
 
     // Determine theme colors based on status and tier
     let themeColor, accentColor, glowColor, tierLabel, tierBadge;

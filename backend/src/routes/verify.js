@@ -7,7 +7,6 @@ const express = require('express');
 const { issueChallenge, verifyChallenge } = require('../services/pkiChallenge');
 const { getAgent } = require('../models/queries');
 const { authLimiter } = require('../middleware/rateLimit');
-const { isValidSolanaAddress } = require('../utils/transform');
 
 const router = express.Router();
 
@@ -17,30 +16,26 @@ const router = express.Router();
  */
 router.post('/verify/challenge', authLimiter, async (req, res, next) => {
   try {
-    // 1. Validate: requires pubkey in body
-    const { pubkey } = req.body;
+    // 1. Validate: requires agentId in body
+    const { agentId } = req.body;
 
-    if (!pubkey || typeof pubkey !== 'string' || pubkey.length === 0) {
+    if (!agentId || typeof agentId !== 'string' || agentId.length === 0) {
       return res.status(400).json({
-        error: 'pubkey is required and must be a non-empty string'
+        error: 'agentId is required and must be a non-empty string'
       });
     }
 
-    if (!isValidSolanaAddress(pubkey)) {
-      return res.status(400).json({ error: 'Invalid Solana public key format' });
-    }
-
     // 2. Check agent exists
-    const agent = await getAgent(pubkey);
+    const agent = await getAgent(agentId);
     if (!agent) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey
+        agentId
       });
     }
 
     // 3. Issue challenge
-    const challengeData = await issueChallenge(pubkey);
+    const challengeData = await issueChallenge(agentId, agent.pubkey);
 
     // 4. Return challenge data
     return res.status(200).json(challengeData);
@@ -56,17 +51,13 @@ router.post('/verify/challenge', authLimiter, async (req, res, next) => {
  */
 router.post('/verify/response', authLimiter, async (req, res, next) => {
   try {
-    // 1. Validate: requires pubkey, nonce, signature in body
-    const { pubkey, nonce, signature } = req.body;
+    // 1. Validate: requires agentId, nonce, signature in body
+    const { agentId, nonce, signature } = req.body;
 
-    if (!pubkey || typeof pubkey !== 'string') {
+    if (!agentId || typeof agentId !== 'string') {
       return res.status(400).json({
-        error: 'pubkey is required and must be a string'
+        error: 'agentId is required and must be a string'
       });
-    }
-
-    if (!isValidSolanaAddress(pubkey)) {
-      return res.status(400).json({ error: 'Invalid Solana public key format' });
     }
 
     if (!nonce || typeof nonce !== 'string') {
@@ -81,9 +72,18 @@ router.post('/verify/response', authLimiter, async (req, res, next) => {
       });
     }
 
-    // 2. Call verifyChallenge
+    // 2. Get agent to retrieve pubkey for verification
+    const agent = await getAgent(agentId);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        agentId
+      });
+    }
+
+    // 3. Call verifyChallenge
     try {
-      const result = await verifyChallenge(pubkey, nonce, signature);
+      const result = await verifyChallenge(agentId, agent.pubkey, nonce, signature);
 
       // 3. If valid, return success response
       return res.status(200).json(result);

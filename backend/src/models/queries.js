@@ -14,39 +14,75 @@ const { query } = require('./db');
  * @param {Object} params - Agent data
  * @returns {Promise<Object>} - Created agent row
  */
-async function createAgent({ pubkey, name, description, tokenMint, bagsApiKeyId, capabilitySet, creatorX, creatorWallet }) {
+async function createAgent({ pubkey, name, description, tokenMint, capabilitySet, creatorX, creatorWallet }) {
   const sql = `
     INSERT INTO agent_identities 
-      (pubkey, name, description, token_mint, bags_api_key_id, capability_set, creator_x, creator_wallet)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      (pubkey, name, description, token_mint, capability_set, creator_x, creator_wallet)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *
   `;
   const result = await query(sql, [
-    pubkey, name, description, tokenMint, bagsApiKeyId, 
+    pubkey, name, description, tokenMint, 
     JSON.stringify(capabilitySet || []), creatorX, creatorWallet
   ]);
   return result.rows[0];
 }
 
 /**
- * Get an agent by pubkey
- * @param {string} pubkey - Agent public key
+ * Get an agent by agent_id
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<Object|null>} - Agent row or null
  */
-async function getAgent(pubkey) {
-  const result = await query('SELECT * FROM agent_identities WHERE pubkey = $1', [pubkey]);
+async function getAgent(agentId) {
+  const result = await query('SELECT * FROM agent_identities WHERE agent_id = $1', [agentId]);
   return result.rows[0] || null;
 }
 
 /**
- * Update agent fields dynamically
+ * Get an agent by pubkey (for backward compatibility / ownership validation)
  * @param {string} pubkey - Agent public key
+ * @returns {Promise<Object|null>} - Agent row or null
+ */
+async function getAgentByPubkey(pubkey) {
+  const result = await query('SELECT * FROM agent_identities WHERE pubkey = $1 LIMIT 1', [pubkey]);
+  return result.rows[0] || null;
+}
+
+/**
+ * Get all agents owned by a pubkey
+ * @param {string} pubkey - Owner public key
+ * @returns {Promise<Array>} - Array of agent rows
+ */
+async function getAgentsByOwner(pubkey) {
+  const result = await query(
+    'SELECT * FROM agent_identities WHERE pubkey = $1 ORDER BY registered_at DESC',
+    [pubkey]
+  );
+  return result.rows;
+}
+
+/**
+ * Count agents owned by a pubkey
+ * @param {string} pubkey - Owner public key
+ * @returns {Promise<number>} - Count of agents
+ */
+async function countAgentsByOwner(pubkey) {
+  const result = await query(
+    'SELECT COUNT(*) as count FROM agent_identities WHERE pubkey = $1',
+    [pubkey]
+  );
+  return parseInt(result.rows[0].count, 10);
+}
+
+/**
+ * Update agent fields dynamically
+ * @param {string} agentId - Agent UUID
  * @param {Object} fields - Fields to update
  * @returns {Promise<Object|null>} - Updated agent row
  */
-async function updateAgent(pubkey, fields) {
+async function updateAgent(agentId, fields) {
   const allowedFields = [
-    'name', 'description', 'token_mint', 'bags_api_key_id', 'said_registered', 
+    'name', 'description', 'token_mint', 'said_registered', 
     'said_trust_score', 'capability_set', 'creator_x', 'creator_wallet',
     'status', 'flag_reason', 'bags_score'
   ];
@@ -66,8 +102,8 @@ async function updateAgent(pubkey, fields) {
   
   if (updates.length === 0) return null;
   
-  values.push(pubkey);
-  const sql = `UPDATE agent_identities SET ${updates.join(', ')} WHERE pubkey = $${paramIndex} RETURNING *`;
+  values.push(agentId);
+  const sql = `UPDATE agent_identities SET ${updates.join(', ')} WHERE agent_id = $${paramIndex} RETURNING *`;
   const result = await query(sql, values);
   return result.rows[0] || null;
 }
@@ -110,87 +146,87 @@ async function listAgents({ status, capability, limit = 20, offset = 0 } = {}) {
 
 /**
  * Update agent status
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @param {string} status - New status
  * @param {string} flagReason - Optional flag reason
  * @returns {Promise<Object|null>} - Updated agent row
  */
-async function updateAgentStatus(pubkey, status, flagReason = null) {
+async function updateAgentStatus(agentId, status, flagReason = null) {
   const sql = `
     UPDATE agent_identities 
     SET status = $1, flag_reason = $2 
-    WHERE pubkey = $3 
+    WHERE agent_id = $3 
     RETURNING *
   `;
-  const result = await query(sql, [status, flagReason, pubkey]);
+  const result = await query(sql, [status, flagReason, agentId]);
   return result.rows[0] || null;
 }
 
 /**
  * Update last_verified timestamp
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<Object|null>} - Updated agent row
  */
-async function updateLastVerified(pubkey) {
+async function updateLastVerified(agentId) {
   const sql = `
     UPDATE agent_identities 
     SET last_verified = NOW() 
-    WHERE pubkey = $1 
+    WHERE agent_id = $1 
     RETURNING *
   `;
-  const result = await query(sql, [pubkey]);
+  const result = await query(sql, [agentId]);
   return result.rows[0] || null;
 }
 
 /**
  * Update BAGS score
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @param {number} score - New BAGS score
  * @returns {Promise<Object|null>} - Updated agent row
  */
-async function updateBagsScore(pubkey, score) {
+async function updateBagsScore(agentId, score) {
   const sql = `
     UPDATE agent_identities 
     SET bags_score = $1 
-    WHERE pubkey = $2 
+    WHERE agent_id = $2 
     RETURNING *
   `;
-  const result = await query(sql, [score, pubkey]);
+  const result = await query(sql, [score, agentId]);
   return result.rows[0] || null;
 }
 
 /**
  * Increment action counters
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @param {boolean} success - Whether action was successful
  * @returns {Promise<Object|null>} - Updated agent row
  */
-async function incrementActions(pubkey, success) {
+async function incrementActions(agentId, success) {
   const sql = `
     UPDATE agent_identities 
     SET 
       total_actions = total_actions + 1,
       successful_actions = successful_actions + CASE WHEN $1 THEN 1 ELSE 0 END,
       failed_actions = failed_actions + CASE WHEN $1 THEN 0 ELSE 1 END
-    WHERE pubkey = $2 
+    WHERE agent_id = $2 
     RETURNING *
   `;
-  const result = await query(sql, [success, pubkey]);
+  const result = await query(sql, [success, agentId]);
   return result.rows[0] || null;
 }
 
 /**
  * Get agent action statistics
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<Object>} - Action stats { total, successful, failed }
  */
-async function getAgentActions(pubkey) {
+async function getAgentActions(agentId) {
   const sql = `
     SELECT total_actions, successful_actions, failed_actions 
     FROM agent_identities 
-    WHERE pubkey = $1
+    WHERE agent_id = $1
   `;
-  const result = await query(sql, [pubkey]);
+  const result = await query(sql, [agentId]);
   if (!result.rows[0]) return null;
   
   const row = result.rows[0];
@@ -210,32 +246,32 @@ async function getAgentActions(pubkey) {
  * @param {Object} params - Verification data
  * @returns {Promise<Object>} - Created verification row
  */
-async function createVerification({ pubkey, nonce, challenge, expiresAt }) {
+async function createVerification({ agentId, pubkey, nonce, challenge, expiresAt }) {
   const sql = `
     INSERT INTO agent_verifications 
-      (pubkey, nonce, challenge, expires_at)
-    VALUES ($1, $2, $3, $4)
+      (agent_id, pubkey, nonce, challenge, expires_at)
+    VALUES ($1, $2, $3, $4, $5)
     RETURNING *
   `;
-  const result = await query(sql, [pubkey, nonce, challenge, expiresAt]);
+  const result = await query(sql, [agentId, pubkey, nonce, challenge, expiresAt]);
   return result.rows[0];
 }
 
 /**
- * Get a pending verification by pubkey and nonce
- * @param {string} pubkey - Agent public key
+ * Get a pending verification by agent_id and nonce
+ * @param {string} agentId - Agent UUID
  * @param {string} nonce - Verification nonce
  * @returns {Promise<Object|null>} - Verification row or null
  */
-async function getVerification(pubkey, nonce) {
+async function getVerification(agentId, nonce) {
   const sql = `
     SELECT * FROM agent_verifications 
-    WHERE pubkey = $1 
+    WHERE agent_id = $1 
       AND nonce = $2 
       AND completed = false 
       AND expires_at > NOW()
   `;
-  const result = await query(sql, [pubkey, nonce]);
+  const result = await query(sql, [agentId, nonce]);
   return result.rows[0] || null;
 }
 
@@ -264,15 +300,15 @@ async function completeVerification(nonce) {
  * @param {Object} params - Flag data
  * @returns {Promise<Object>} - Created flag row
  */
-async function createFlag({ pubkey, reporterPubkey, reason, evidence }) {
+async function createFlag({ agentId, pubkey, reporterPubkey, reason, evidence }) {
   const sql = `
     INSERT INTO agent_flags 
-      (pubkey, reporter_pubkey, reason, evidence)
-    VALUES ($1, $2, $3, $4)
+      (agent_id, pubkey, reporter_pubkey, reason, evidence)
+    VALUES ($1, $2, $3, $4, $5)
     RETURNING *
   `;
   const result = await query(sql, [
-    pubkey, reporterPubkey, reason, 
+    agentId, pubkey, reporterPubkey, reason, 
     evidence ? JSON.stringify(evidence) : null
   ]);
   return result.rows[0];
@@ -280,26 +316,26 @@ async function createFlag({ pubkey, reporterPubkey, reason, evidence }) {
 
 /**
  * Get all flags for an agent
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<Array>} - Array of flag rows
  */
-async function getFlags(pubkey) {
+async function getFlags(agentId) {
   const result = await query(
-    'SELECT * FROM agent_flags WHERE pubkey = $1 ORDER BY created_at DESC',
-    [pubkey]
+    'SELECT * FROM agent_flags WHERE agent_id = $1 ORDER BY created_at DESC',
+    [agentId]
   );
   return result.rows;
 }
 
 /**
  * Get count of unresolved flags for an agent
- * @param {string} pubkey - Agent public key
+ * @param {string} agentId - Agent UUID
  * @returns {Promise<number>} - Count of unresolved flags
  */
-async function getUnresolvedFlagCount(pubkey) {
+async function getUnresolvedFlagCount(agentId) {
   const result = await query(
-    'SELECT COUNT(*) as count FROM agent_flags WHERE pubkey = $1 AND resolved = false',
-    [pubkey]
+    'SELECT COUNT(*) as count FROM agent_flags WHERE agent_id = $1 AND resolved = false',
+    [agentId]
   );
   return parseInt(result.rows[0].count, 10);
 }
@@ -378,6 +414,9 @@ module.exports = {
   // Agent Identity queries
   createAgent,
   getAgent,
+  getAgentByPubkey,
+  getAgentsByOwner,
+  countAgentsByOwner,
   updateAgent,
   listAgents,
   countAgents,

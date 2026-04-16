@@ -37,6 +37,7 @@ function snakeToCamel(obj) {
 /**
  * Transform agent fields to camelCase for API responses
  * Maps capability_set -> capabilities for frontend compatibility
+ * Ensures agent_id is available as agentId
  * @param {Object} agent - Agent row from database
  * @returns {Object} - Agent with camelCase fields
  */
@@ -49,6 +50,11 @@ function transformAgent(agent) {
   if (transformed.capabilitySet !== undefined) {
     transformed.capabilities = transformed.capabilitySet;
     delete transformed.capabilitySet;
+  }
+
+  // Ensure agent_id comes through as agentId (snakeToCamel should handle this, but be explicit)
+  if (agent.agent_id && !transformed.agentId) {
+    transformed.agentId = agent.agent_id;
   }
 
   return transformed;

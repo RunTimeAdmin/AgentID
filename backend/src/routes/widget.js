@@ -12,15 +12,15 @@ const { escapeHtml } = require('../utils/transform');
 const router = express.Router();
 
 /**
- * GET /widget/:pubkey
+ * GET /widget/:agentId
  * Returns embeddable HTML widget
  */
-router.get('/widget/:pubkey', defaultLimiter, async (req, res, next) => {
+router.get('/widget/:agentId', defaultLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
 
     // Check agent exists
-    const agent = await getAgent(pubkey);
+    const agent = await getAgent(agentId);
     if (!agent) {
       // Return simple error HTML page
       res.setHeader('Content-Type', 'text/html');
@@ -55,7 +55,7 @@ router.get('/widget/:pubkey', defaultLimiter, async (req, res, next) => {
       font-size: 18px;
       color: #888;
     }
-    .pubkey {
+    .agent-id {
       font-family: monospace;
       background: #1a1a1a;
       padding: 8px 16px;
@@ -70,13 +70,13 @@ router.get('/widget/:pubkey', defaultLimiter, async (req, res, next) => {
   <div class="error-container">
     <div class="error-code">404</div>
     <div class="error-message">Agent not found</div>
-    <div class="pubkey">${escapeHtml(pubkey)}</div>
+    <div class="agent-id">${escapeHtml(agentId)}</div>
   </div>
 </body>
 </html>`);
     }
 
-    const html = await getWidgetHTML(pubkey);
+    const html = await getWidgetHTML(agentId);
 
     res.setHeader('Content-Type', 'text/html');
     return res.status(200).send(html);

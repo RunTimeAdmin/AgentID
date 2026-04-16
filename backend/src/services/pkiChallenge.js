@@ -11,25 +11,27 @@ const config = require('../config/index.js');
 
 /**
  * Issue a new challenge for an agent
+ * @param {string} agentId - Agent UUID
  * @param {string} pubkey - Agent public key
  * @returns {Promise<{nonce: string, challenge: string, expiresIn: number}>} - Challenge data
  */
-async function issueChallenge(pubkey) {
+async function issueChallenge(agentId, pubkey) {
   const nonce = crypto.randomUUID();
   const timestamp = Date.now();
-  const challengeString = `AGENTID-VERIFY:${pubkey}:${nonce}:${timestamp}`;
-  
+  const challengeString = `AGENTID-VERIFY:${agentId}:${pubkey}:${nonce}:${timestamp}`;
+
   // Calculate expiration time
   const expiresAt = new Date(Date.now() + config.challengeExpirySeconds * 1000);
-  
+
   // Store in database
   await createVerification({
+    agentId,
     pubkey,
     nonce,
     challenge: challengeString,
     expiresAt
   });
-  
+
   // Return base58-encoded challenge
   return {
     nonce,
@@ -40,15 +42,16 @@ async function issueChallenge(pubkey) {
 
 /**
  * Verify a challenge response
+ * @param {string} agentId - Agent UUID
  * @param {string} pubkey - Agent public key
  * @param {string} nonce - Challenge nonce
  * @param {string} signature - Base58-encoded signature
- * @returns {Promise<{verified: boolean, pubkey: string, timestamp: number}>} - Verification result
+ * @returns {Promise<{verified: boolean, agentId: string, pubkey: string, timestamp: number}>} - Verification result
  * @throws {Error} - If challenge not found, expired, or signature invalid
  */
-async function verifyChallenge(pubkey, nonce, signature) {
+async function verifyChallenge(agentId, pubkey, nonce, signature) {
   // Fetch verification record
-  const verification = await getVerification(pubkey, nonce);
+  const verification = await getVerification(agentId, nonce);
   
   // Check if challenge exists
   if (!verification) {
@@ -84,12 +87,13 @@ async function verifyChallenge(pubkey, nonce, signature) {
   
   // Mark challenge as completed
   await completeVerification(nonce);
-  
+
   // Update last verified timestamp
-  await updateLastVerified(pubkey);
-  
+  await updateLastVerified(agentId);
+
   return {
     verified: true,
+    agentId,
     pubkey,
     timestamp: Date.now()
   };

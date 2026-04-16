@@ -6,7 +6,7 @@
 const express = require('express');
 const { verifyBagsSignature } = require('../services/bagsAuthVerifier');
 const { registerWithSAID } = require('../services/saidBinding');
-const { createAgent, getAgent } = require('../models/queries');
+const { createAgent, getAgentByPubkey } = require('../models/queries');
 const { authLimiter } = require('../middleware/rateLimit');
 const { transformAgent, isValidSolanaAddress } = require('../utils/transform');
 
@@ -98,12 +98,13 @@ router.post('/register', authLimiter, async (req, res, next) => {
       });
     }
 
-    // 4. Check if agent already registered
-    const existingAgent = await getAgent(pubkey);
-    if (existingAgent) {
+    // 4. Check if agent with same pubkey and name already exists
+    const existingAgents = await getAgentByPubkey(pubkey);
+    if (existingAgents && existingAgents.name === name) {
       return res.status(409).json({
-        error: 'Agent already registered',
-        pubkey
+        error: 'Agent with this pubkey and name already registered',
+        pubkey,
+        name
       });
     }
 
@@ -148,6 +149,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
     // 7. Return created agent with SAID status
     return res.status(201).json({
       agent: transformAgent(agent),
+      agentId: agent.agent_id,
       said: saidStatus
     });
 

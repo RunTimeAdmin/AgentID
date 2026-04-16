@@ -6,7 +6,7 @@
 const express = require('express');
 const nacl = require('tweetnacl');
 const bs58 = require('bs58');
-const { getAgent, listAgents, countAgents, discoverAgents, updateAgent } = require('../models/queries');
+const { getAgent, getAgentsByOwner, listAgents, countAgents, discoverAgents, updateAgent } = require('../models/queries');
 const { computeBagsScore } = require('../services/bagsReputation');
 const { defaultLimiter, authLimiter } = require('../middleware/rateLimit');
 const { transformAgent, transformAgents, isValidSolanaAddress } = require('../utils/transform');
@@ -55,10 +55,10 @@ router.get('/agents', defaultLimiter, async (req, res, next) => {
 });
 
 /**
- * GET /agents/:pubkey
- * Get single agent detail with reputation score
+ * GET /agents/owner/:pubkey
+ * Get all agents owned by a pubkey (must be defined BEFORE /:agentId route)
  */
-router.get('/agents/:pubkey', defaultLimiter, async (req, res, next) => {
+router.get('/agents/owner/:pubkey', defaultLimiter, async (req, res, next) => {
   try {
     const { pubkey } = req.params;
 
@@ -66,16 +66,36 @@ router.get('/agents/:pubkey', defaultLimiter, async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid Solana public key format' });
     }
 
-    const agent = await getAgent(pubkey);
+    const agents = await getAgentsByOwner(pubkey);
+
+    return res.status(200).json({
+      pubkey,
+      agents: transformAgents(agents),
+      count: agents.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /agents/:agentId
+ * Get single agent detail with reputation score
+ */
+router.get('/agents/:agentId', defaultLimiter, async (req, res, next) => {
+  try {
+    const { agentId } = req.params;
+
+    const agent = await getAgent(agentId);
     if (!agent) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey
+        agentId
       });
     }
 
     // Fetch reputation score
-    const reputation = await computeBagsScore(pubkey);
+    const reputation = await computeBagsScore(agentId);
 
     return res.status(200).json({
       agent: transformAgent(agent),
@@ -118,12 +138,12 @@ router.get('/discover', defaultLimiter, async (req, res, next) => {
 });
 
 /**
- * PUT /agents/:pubkey/update
+ * PUT /agents/:agentId/update
  * Update agent metadata with signature verification
  */
-router.put('/agents/:pubkey/update', authLimiter, async (req, res, next) => {
+router.put('/agents/:agentId/update', authLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
     const { signature, timestamp, name, tokenMint, capabilities, creatorX, description } = req.body;
 
     // 1. Validate required fields
@@ -139,8 +159,19 @@ router.put('/agents/:pubkey/update', authLimiter, async (req, res, next) => {
       });
     }
 
-    // 2. Verify ownership: construct message and verify Ed25519 signature
-    const message = `AGENTID-UPDATE:${pubkey}:${timestamp}`;
+    // 2. Check agent exists and get pubkey for verification
+    const agent = await getAgent(agentId);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        agentId
+      });
+    }
+
+    const pubkey = agent.pubkey;
+
+    // 3. Verify ownership: construct message and verify Ed25519 signature
+    const message = `AGENTID-UPDATE:${agentId}:${timestamp}`;
     let isSignatureValid = false;
 
     try {
@@ -162,7 +193,7 @@ router.put('/agents/:pubkey/update', authLimiter, async (req, res, next) => {
       });
     }
 
-    // 3. Check timestamp is within 5 minutes (replay protection)
+    // 4. Check timestamp is within 5 minutes (replay protection)
     const now = Date.now();
     const timestampAge = now - timestamp;
 
@@ -175,15 +206,6 @@ router.put('/agents/:pubkey/update', authLimiter, async (req, res, next) => {
     if (timestamp > now + 60000) { // Allow 1 minute clock skew for future timestamps
       return res.status(401).json({
         error: 'Timestamp is in the future'
-      });
-    }
-
-    // 4. Check agent exists
-    const agent = await getAgent(pubkey);
-    if (!agent) {
-      return res.status(404).json({
-        error: 'Agent not found',
-        pubkey
       });
     }
 
@@ -233,7 +255,7 @@ router.put('/agents/:pubkey/update', authLimiter, async (req, res, next) => {
     }
 
     // 6. Update agent
-    const updatedAgent = await updateAgent(pubkey, updateFields);
+    const updatedAgent = await updateAgent(agentId, updateFields);
 
     if (!updatedAgent) {
       return res.status(500).json({

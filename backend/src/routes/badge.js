@@ -10,21 +10,21 @@ const { defaultLimiter } = require('../middleware/rateLimit');
 const router = express.Router();
 
 /**
- * GET /badge/:pubkey
+ * GET /badge/:agentId
  * Returns trust badge JSON
  */
-router.get('/badge/:pubkey', defaultLimiter, async (req, res, next) => {
+router.get('/badge/:agentId', defaultLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
 
-    const badgeData = await getBadgeJSON(pubkey);
+    const badgeData = await getBadgeJSON(agentId);
 
     return res.status(200).json(badgeData);
   } catch (error) {
     if (error.message.includes('Agent not found')) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey: req.params.pubkey
+        agentId: req.params.agentId
       });
     }
     next(error);
@@ -32,14 +32,14 @@ router.get('/badge/:pubkey', defaultLimiter, async (req, res, next) => {
 });
 
 /**
- * GET /badge/:pubkey/svg
+ * GET /badge/:agentId/svg
  * Returns trust badge SVG
  */
-router.get('/badge/:pubkey/svg', defaultLimiter, async (req, res, next) => {
+router.get('/badge/:agentId/svg', defaultLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
 
-    const svg = await getBadgeSVG(pubkey);
+    const svg = await getBadgeSVG(agentId);
 
     res.setHeader('Content-Type', 'image/svg+xml');
     return res.status(200).send(svg);
@@ -47,7 +47,7 @@ router.get('/badge/:pubkey/svg', defaultLimiter, async (req, res, next) => {
     if (error.message.includes('Agent not found')) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey: req.params.pubkey
+        agentId: req.params.agentId
       });
     }
     next(error);

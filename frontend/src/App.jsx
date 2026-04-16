@@ -177,7 +177,7 @@ function App() {
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Registry />} />
-            <Route path="/agents/:pubkey" element={<AgentDetail />} />
+            <Route path="/agents/:agentId" element={<AgentDetail />} />
             <Route path="/register" element={<Register />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/demo" element={<Demo />} />

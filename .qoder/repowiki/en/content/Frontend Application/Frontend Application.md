@@ -24,6 +24,7 @@
 - Enhanced TrustBadge component with verified tier styling, shimmer animations, and gold-themed visual indicators
 - Updated AgentDetail page to display tier information alongside status badges
 - Added Demo route and navigation elements for interactive demonstration
+- **Updated Footer navigation links** from placeholder href='#' to functional URLs pointing to official documentation, API reference, and GitHub repository
 - Updated component props and styling patterns to support tier-based visual hierarchy
 
 ## Table of Contents
@@ -123,7 +124,7 @@ DEMO_PAGE --> API
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 
 ## Core Components
-- Navigation and Footer: Provide global site layout and links with enhanced Demo route integration.
+- Navigation and Footer: Provide global site layout and links with enhanced Demo route integration. **Updated** Footer now contains functional links to official documentation, API reference, and GitHub repository.
 - Pages:
   - Registry: Browse agents with filters, pagination, and loading/error states.
   - AgentDetail: View agent profile, reputation, capabilities, flags/attestations, and flag submission with cryptographic authentication. Now displays tier information for verified agents.
@@ -136,7 +137,7 @@ DEMO_PAGE --> API
   - CapabilityList: Capability tags with categorization and icons.
   - FlagModal: Enhanced controlled modal for reporting agents with Ed25519 signature requirements and cryptographic authentication.
 
-**Updated** Enhanced TrustBadge component now supports verified tier styling with shimmer animations and gold-themed visual indicators for premium verified agents. AgentDetail page now displays tier information alongside status badges for comprehensive agent verification context.
+**Updated** Enhanced TrustBadge component now supports verified tier styling with shimmer animations and gold-themed visual indicators for premium verified agents. AgentDetail page now displays tier information alongside status badges for comprehensive agent verification context. **Footer navigation links have been updated to functional URLs for improved user experience.**
 
 **Section sources**
 - [App.jsx:7-193](file://frontend/src/App.jsx#L7-L193)
@@ -190,9 +191,9 @@ C-->>P : Display tier information and status
   - "/discover" → Discover
   - "/demo" → Demo (new)
 - Navigation highlights active route and includes responsive mobile menu with Demo route integration.
-- Footer provides informational links.
+- Footer provides informational links with **updated functional URLs** for improved user accessibility.
 
-**Updated** Added Demo route with dedicated navigation elements and styling for interactive demonstration.
+**Updated** Added Demo route with dedicated navigation elements and styling for interactive demonstration. **Footer navigation links now point to official external resources instead of placeholder links.**
 
 **Section sources**
 - [App.jsx:1-193](file://frontend/src/App.jsx#L1-L193)
@@ -245,7 +246,7 @@ ShowSkeletons --> End
   - Handles 404 and generic errors with dedicated UI.
 - Backend integration: getAgent, getBadge, getReputation, getAttestations, getFlags, flagAgent.
 
-**Updated** Enhanced TrustBadge rendering to display tier information for verified agents with gold-themed styling and shimmer animations.
+**Updated** Enhanced TrustBadge rendering to display tier information for verified agents with gold-themed styling and shimmer animations. **Footer navigation provides direct links to official documentation and resources.**
 
 ```mermaid
 sequenceDiagram
@@ -513,6 +514,11 @@ Vite --> React
   - Ensure tweetnacl and bs58 libraries are properly loaded for keypair generation.
   - Verify browser supports WebCrypto API for cryptographic operations.
   - Check that API endpoints are accessible for registration and verification steps.
+- **New** Footer Link Issues:
+  - All footer links now point to official external resources and open in new tabs with proper security attributes.
+  - Documentation link: https://github.com/RunTimeAdmin/AgentID/wiki
+  - API reference link: https://github.com/RunTimeAdmin/AgentID/blob/main/docs/API_REFERENCE.md
+  - GitHub repository link: https://github.com/RunTimeAdmin/AgentID
 
 **Section sources**
 - [api.js:23-33](file://frontend/src/lib/api.js#L23-L33)
@@ -520,9 +526,10 @@ Vite --> React
 - [FlagModal.jsx:12-73](file://frontend/src/components/FlagModal.jsx#L12-L73)
 - [AgentDetail.jsx:214-227](file://frontend/src/pages/AgentDetail.jsx#L214-L227)
 - [Demo.jsx:147-203](file://frontend/src/pages/Demo.jsx#L147-L203)
+- [App.jsx:161-165](file://frontend/src/App.jsx#L161-L165)
 
 ## Conclusion
-The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management. **The TrustBadge enhancement introduces tier-based visual hierarchy with premium verified agents receiving gold-themed styling and shimmer animations, significantly improving visual distinction and trust communication. The addition of the Demo route provides comprehensive interactive guidance for users experiencing the complete verification workflow.**
+The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management. **The TrustBadge enhancement introduces tier-based visual hierarchy with premium verified agents receiving gold-themed styling and shimmer animations, significantly improving visual distinction and trust communication. The addition of the Demo route provides comprehensive interactive guidance for users experiencing the complete verification workflow.** **The footer navigation has been enhanced with functional links to official documentation, API reference, and GitHub repository, improving user access to external resources.**
 
 ## Appendices
 
@@ -579,3 +586,15 @@ The AgentID frontend is a modular, theme-consistent React application with clear
 
 **Section sources**
 - [Demo.jsx:121-780](file://frontend/src/pages/Demo.jsx#L121-L780)
+
+### Footer Navigation Enhancement
+**New** The footer navigation has been enhanced with functional external links:
+
+1. **Documentation Link**: Points to https://github.com/RunTimeAdmin/AgentID/wiki for comprehensive project documentation
+2. **API Reference Link**: Points to https://github.com/RunTimeAdmin/AgentID/blob/main/docs/API_REFERENCE.md for technical API specifications
+3. **GitHub Repository Link**: Points to https://github.com/RunTimeAdmin/AgentID for source code and project repository
+4. **Security Attributes**: All links open in new tabs with `target="_blank"` and `rel="noopener noreferrer"` for security
+5. **Consistent Styling**: Maintains the same hover effects and color scheme as other navigation elements
+
+**Section sources**
+- [App.jsx:161-165](file://frontend/src/App.jsx#L161-L165)

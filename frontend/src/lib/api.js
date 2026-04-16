@@ -44,20 +44,20 @@ export const getAgents = async (filters = {}) => {
   return response.data;
 };
 
-export const getAgent = async (pubkey) => {
-  const response = await api.get(`/agents/${pubkey}`);
+export const getAgent = async (agentId) => {
+  const response = await api.get(`/agents/${agentId}`);
   return response.data;
 };
 
 // Trust Badge
-export const getBadge = async (pubkey) => {
-  const response = await api.get(`/badge/${pubkey}`);
+export const getBadge = async (agentId) => {
+  const response = await api.get(`/badge/${agentId}`);
   return response.data;
 };
 
 // Reputation
-export const getReputation = async (pubkey) => {
-  const response = await api.get(`/reputation/${pubkey}`);
+export const getReputation = async (agentId) => {
+  const response = await api.get(`/reputation/${agentId}`);
   return response.data;
 };
 
@@ -68,14 +68,14 @@ export const registerAgent = async (registrationData) => {
 };
 
 // PKI Challenge-Response
-export const issueChallenge = async (pubkey) => {
-  const response = await api.post('/verify/challenge', { pubkey });
+export const issueChallenge = async (agentId) => {
+  const response = await api.post('/verify/challenge', { agentId });
   return response.data;
 };
 
-export const verifyChallenge = async (pubkey, nonce, signature) => {
+export const verifyChallenge = async (agentId, nonce, signature) => {
   const response = await api.post('/verify/response', { 
-    pubkey, 
+    agentId, 
     nonce, 
     signature 
   });
@@ -83,14 +83,14 @@ export const verifyChallenge = async (pubkey, nonce, signature) => {
 };
 
 // Attestations
-export const attestAgent = async (pubkey, attestationData) => {
-  const response = await api.post(`/agents/${pubkey}/attest`, attestationData);
+export const attestAgent = async (agentId, attestationData) => {
+  const response = await api.post(`/agents/${agentId}/attest`, attestationData);
   return response.data;
 };
 
-export const flagAgent = async (pubkey, flagData) => {
+export const flagAgent = async (agentId, flagData) => {
   // flagData should include: reporterPubkey, signature, timestamp, reason, evidence (optional)
-  const response = await api.post(`/agents/${pubkey}/flag`, flagData);
+  const response = await api.post(`/agents/${agentId}/flag`, flagData);
   return response.data;
 };
 
@@ -106,19 +106,19 @@ export const discoverAgents = async (params = {}) => {
 };
 
 // Widget
-export const getWidgetHtml = async (pubkey) => {
-  const response = await api.get(`/widget/${pubkey}`);
+export const getWidgetHtml = async (agentId) => {
+  const response = await api.get(`/widget/${agentId}`);
   return response.data;
 };
 
-export const getBadgeSvg = async (pubkey) => {
-  const response = await api.get(`/badge/${pubkey}/svg`);
+export const getBadgeSvg = async (agentId) => {
+  const response = await api.get(`/badge/${agentId}/svg`);
   return response.data;
 };
 
 // Agent Updates
-export const updateAgent = async (pubkey, updateData, signature, timestamp) => {
-  const response = await api.put(`/agents/${pubkey}/update`, {
+export const updateAgent = async (agentId, updateData, signature, timestamp) => {
+  const response = await api.put(`/agents/${agentId}/update`, {
     ...updateData,
     signature,
     timestamp,
@@ -127,13 +127,19 @@ export const updateAgent = async (pubkey, updateData, signature, timestamp) => {
 };
 
 // Attestation and Flag History
-export const getAttestations = async (pubkey) => {
-  const response = await api.get(`/agents/${pubkey}/attestations`);
+export const getAttestations = async (agentId) => {
+  const response = await api.get(`/agents/${agentId}/attestations`);
   return response.data;
 };
 
-export const getFlags = async (pubkey) => {
-  const response = await api.get(`/agents/${pubkey}/flags`);
+export const getFlags = async (agentId) => {
+  const response = await api.get(`/agents/${agentId}/flags`);
+  return response.data;
+};
+
+// Get agents by owner pubkey
+export const getAgentsByOwner = async (pubkey) => {
+  const response = await api.get(`/agents/owner/${pubkey}`);
   return response.data;
 };
 

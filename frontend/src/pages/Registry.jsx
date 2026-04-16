@@ -221,8 +221,8 @@ export default function Registry() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in">
             {agents.map((agent) => (
               <Link
-                key={agent.pubkey}
-                to={`/agents/${agent.pubkey}`}
+                key={agent.agentId || agent.agent_id || agent.id}
+                to={`/agents/${agent.agentId || agent.agent_id || agent.id}`}
                 className="block transition-transform duration-200 hover:scale-[1.02]"
               >
                 <TrustBadge

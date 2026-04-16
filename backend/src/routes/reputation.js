@@ -11,26 +11,27 @@ const { defaultLimiter } = require('../middleware/rateLimit');
 const router = express.Router();
 
 /**
- * GET /reputation/:pubkey
+ * GET /reputation/:agentId
  * Returns full reputation breakdown
  */
-router.get('/reputation/:pubkey', defaultLimiter, async (req, res, next) => {
+router.get('/reputation/:agentId', defaultLimiter, async (req, res, next) => {
   try {
-    const { pubkey } = req.params;
+    const { agentId } = req.params;
 
     // Check agent exists first
-    const agent = await getAgent(pubkey);
+    const agent = await getAgent(agentId);
     if (!agent) {
       return res.status(404).json({
         error: 'Agent not found',
-        pubkey
+        agentId
       });
     }
 
-    const reputation = await computeBagsScore(pubkey);
+    const reputation = await computeBagsScore(agentId);
 
     return res.status(200).json({
-      pubkey,
+      agentId,
+      pubkey: agent.pubkey,
       score: reputation.score,
       label: reputation.label,
       breakdown: reputation.breakdown

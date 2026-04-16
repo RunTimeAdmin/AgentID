@@ -20,6 +20,8 @@ const { issueChallenge, verifyChallenge } = require('../src/services/pkiChalleng
 const nacl = require('tweetnacl');
 const bs58 = require('bs58');
 
+const TEST_AGENT_ID = '550e8400-e29b-41d4-a716-446655440000';
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -31,13 +33,14 @@ describe('PKI Challenge Service', () => {
       
       createVerification.mockResolvedValue({
         id: 1,
+        agent_id: TEST_AGENT_ID,
         pubkey,
         nonce: 'test-nonce-123',
-        challenge: `AGENTID-VERIFY:${pubkey}:test-nonce-123:1234567890`,
+        challenge: `AGENTID-VERIFY:${TEST_AGENT_ID}:${pubkey}:test-nonce-123:1234567890`,
         expires_at: new Date(Date.now() + 300000)
       });
 
-      const result = await issueChallenge(pubkey);
+      const result = await issueChallenge(TEST_AGENT_ID, pubkey);
 
       expect(result).toHaveProperty('nonce');
       expect(result).toHaveProperty('challenge');
@@ -54,6 +57,7 @@ describe('PKI Challenge Service', () => {
         // Return the inserted row with the nonce that was passed
         return Promise.resolve({
           id: 1,
+          agent_id: params.agentId,
           pubkey: params.pubkey,
           nonce: params.nonce,
           challenge: params.challenge,
@@ -61,22 +65,23 @@ describe('PKI Challenge Service', () => {
         });
       });
 
-      const result = await issueChallenge(pubkey);
+      const result = await issueChallenge(TEST_AGENT_ID, pubkey);
 
       // Decode the challenge from base58
       const decodedChallenge = Buffer.from(bs58.decode(result.challenge)).toString('utf-8');
       
-      // Verify format: AGENTID-VERIFY:{pubkey}:{nonce}:{timestamp}
-      const pattern = new RegExp(`^AGENTID-VERIFY:${pubkey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:[^:]+:\\d+$`);
+      // Verify format: AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}
+      const pattern = new RegExp(`^AGENTID-VERIFY:${TEST_AGENT_ID.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:${pubkey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:[^:]+:\\d+$`);
       expect(decodedChallenge).toMatch(pattern);
       
       // Verify the parts
       const parts = decodedChallenge.split(':');
-      expect(parts).toHaveLength(4);
+      expect(parts).toHaveLength(5);
       expect(parts[0]).toBe('AGENTID-VERIFY');
-      expect(parts[1]).toBe(pubkey);
-      expect(parts[2]).toBe(result.nonce);
-      expect(parseInt(parts[3], 10)).toBeGreaterThan(0);
+      expect(parts[1]).toBe(TEST_AGENT_ID);
+      expect(parts[2]).toBe(pubkey);
+      expect(parts[3]).toBe(result.nonce);
+      expect(parseInt(parts[4], 10)).toBeGreaterThan(0);
     });
   });
 
@@ -86,7 +91,7 @@ describe('PKI Challenge Service', () => {
       const keypair = nacl.sign.keyPair();
       const pubkey = bs58.encode(keypair.publicKey);
       const nonce = 'test-nonce-456';
-      const challengeString = `AGENTID-VERIFY:${pubkey}:${nonce}:${Date.now()}`;
+      const challengeString = `AGENTID-VERIFY:${TEST_AGENT_ID}:${pubkey}:${nonce}:${Date.now()}`;
       
       // Sign the challenge
       const messageBytes = Buffer.from(challengeString, 'utf-8');
@@ -96,6 +101,7 @@ describe('PKI Challenge Service', () => {
       // Mock the database responses
       getVerification.mockResolvedValue({
         id: 1,
+        agent_id: TEST_AGENT_ID,
         pubkey,
         nonce,
         challenge: challengeString,
@@ -106,10 +112,11 @@ describe('PKI Challenge Service', () => {
       completeVerification.mockResolvedValue({ id: 1 });
       updateLastVerified.mockResolvedValue({ id: 1 });
 
-      const result = await verifyChallenge(pubkey, nonce, signature);
+      const result = await verifyChallenge(TEST_AGENT_ID, pubkey, nonce, signature);
 
       expect(result).toEqual({
         verified: true,
+        agentId: TEST_AGENT_ID,
         pubkey,
         timestamp: expect.any(Number)
       });
@@ -123,7 +130,7 @@ describe('PKI Challenge Service', () => {
       const keypair2 = nacl.sign.keyPair();
       const pubkey = bs58.encode(keypair1.publicKey);
       const nonce = 'test-nonce-789';
-      const challengeString = `AGENTID-VERIFY:${pubkey}:${nonce}:${Date.now()}`;
+      const challengeString = `AGENTID-VERIFY:${TEST_AGENT_ID}:${pubkey}:${nonce}:${Date.now()}`;
       
       // Sign with wrong key
       const messageBytes = Buffer.from(challengeString, 'utf-8');
@@ -133,6 +140,7 @@ describe('PKI Challenge Service', () => {
       // Mock the verification record
       getVerification.mockResolvedValue({
         id: 1,
+        agent_id: TEST_AGENT_ID,
         pubkey,
         nonce,
         challenge: challengeString,
@@ -140,7 +148,7 @@ describe('PKI Challenge Service', () => {
         completed: false
       });
 
-      await expect(verifyChallenge(pubkey, nonce, signature)).rejects.toThrow('Invalid signature');
+      await expect(verifyChallenge(TEST_AGENT_ID, pubkey, nonce, signature)).rejects.toThrow('Invalid signature');
     });
   });
 
@@ -153,16 +161,17 @@ describe('PKI Challenge Service', () => {
       // Mock an expired verification record
       getVerification.mockResolvedValue({
         id: 1,
+        agent_id: TEST_AGENT_ID,
         pubkey,
         nonce,
-        challenge: `AGENTID-VERIFY:${pubkey}:${nonce}:${Date.now()}`,
+        challenge: `AGENTID-VERIFY:${TEST_AGENT_ID}:${pubkey}:${nonce}:${Date.now()}`,
         expires_at: new Date(Date.now() - 1000), // Expired 1 second ago
         completed: false
       });
 
       const signature = bs58.encode(Buffer.from('dummy'));
 
-      await expect(verifyChallenge(pubkey, nonce, signature)).rejects.toThrow('expired');
+      await expect(verifyChallenge(TEST_AGENT_ID, pubkey, nonce, signature)).rejects.toThrow('expired');
     });
   });
 });

@@ -26,6 +26,9 @@ const { getSAIDTrustScore } = require('../src/services/saidBinding');
 const { computeBagsScore, refreshAndStoreScore } = require('../src/services/bagsReputation');
 const axios = require('axios');
 
+const TEST_AGENT_ID = '550e8400-e29b-41d4-a716-446655440000';
+const TEST_PUBKEY = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -33,12 +36,12 @@ beforeEach(() => {
 describe('BAGS Reputation Service', () => {
   describe('Scoring logic', () => {
     it('should compute score with all 5 factors', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
       const tokenMint = 'TokenMint123';
       
       // Mock agent data
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: tokenMint,
         registered_at: new Date(Date.now() - 10 * 86400000) // 10 days ago
       });
@@ -64,7 +67,7 @@ describe('BAGS Reputation Service', () => {
       // Mock no flags (10 points)
       getUnresolvedFlagCount.mockResolvedValue(0);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result).toHaveProperty('score');
       expect(result).toHaveProperty('label');
@@ -77,10 +80,9 @@ describe('BAGS Reputation Service', () => {
     });
 
     it('should have breakdown that sums to total score', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: null,
         registered_at: new Date()
       });
@@ -90,7 +92,7 @@ describe('BAGS Reputation Service', () => {
       getSAIDTrustScore.mockRejectedValue(new Error('API error'));
       getUnresolvedFlagCount.mockResolvedValue(0);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       const sum = result.breakdown.feeActivity.score +
                   result.breakdown.successRate.score +
@@ -104,10 +106,9 @@ describe('BAGS Reputation Service', () => {
 
   describe('Label thresholds', () => {
     it('should return HIGH label for score >= 80', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: 'token123',
         registered_at: new Date(Date.now() - 100 * 86400000) // 100 days
       });
@@ -121,17 +122,16 @@ describe('BAGS Reputation Service', () => {
       // No flags
       getUnresolvedFlagCount.mockResolvedValue(0);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.score).toBeGreaterThanOrEqual(80);
       expect(result.label).toBe('HIGH');
     });
 
     it('should return MEDIUM label for score >= 60 and < 80', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: 'token123',
         registered_at: new Date(Date.now() - 30 * 86400000) // 30 days
       });
@@ -145,7 +145,7 @@ describe('BAGS Reputation Service', () => {
       // No flags
       getUnresolvedFlagCount.mockResolvedValue(0);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.score).toBeGreaterThanOrEqual(60);
       expect(result.score).toBeLessThan(80);
@@ -153,10 +153,9 @@ describe('BAGS Reputation Service', () => {
     });
 
     it('should return LOW label for score >= 40 and < 60', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: 'token123',
         registered_at: new Date(Date.now() - 10 * 86400000) // 10 days ago
       });
@@ -170,7 +169,7 @@ describe('BAGS Reputation Service', () => {
       // One flag (5 points)
       getUnresolvedFlagCount.mockResolvedValue(1);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.score).toBeGreaterThanOrEqual(40);
       expect(result.score).toBeLessThan(60);
@@ -178,10 +177,9 @@ describe('BAGS Reputation Service', () => {
     });
 
     it('should return UNVERIFIED label for score < 40', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: null,
         registered_at: new Date() // Just registered
       });
@@ -195,7 +193,7 @@ describe('BAGS Reputation Service', () => {
       // Multiple flags
       getUnresolvedFlagCount.mockResolvedValue(3);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.score).toBeLessThan(40);
       expect(result.label).toBe('UNVERIFIED');
@@ -204,10 +202,9 @@ describe('BAGS Reputation Service', () => {
 
   describe('Graceful degradation', () => {
     it('should handle SAID API failure gracefully', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: null,
         registered_at: new Date()
       });
@@ -217,7 +214,7 @@ describe('BAGS Reputation Service', () => {
       getSAIDTrustScore.mockRejectedValue(new Error('SAID API error'));
       getUnresolvedFlagCount.mockResolvedValue(0);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.breakdown.saidTrust.score).toBe(0);
       expect(result).toHaveProperty('score');
@@ -225,10 +222,9 @@ describe('BAGS Reputation Service', () => {
     });
 
     it('should handle Bags API failure gracefully', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: 'token123',
         registered_at: new Date()
       });
@@ -239,7 +235,7 @@ describe('BAGS Reputation Service', () => {
       getSAIDTrustScore.mockResolvedValue({ score: 0, label: 'UNKNOWN' });
       getUnresolvedFlagCount.mockResolvedValue(0);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.breakdown.feeActivity.score).toBe(0);
       expect(result).toHaveProperty('score');
@@ -247,10 +243,9 @@ describe('BAGS Reputation Service', () => {
     });
 
     it('should handle both SAID and Bags API failures gracefully', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: 'token123',
         registered_at: new Date()
       });
@@ -260,7 +255,7 @@ describe('BAGS Reputation Service', () => {
       getSAIDTrustScore.mockRejectedValue(new Error('SAID API error'));
       getUnresolvedFlagCount.mockResolvedValue(0);
 
-      const result = await computeBagsScore(pubkey);
+      const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.breakdown.feeActivity.score).toBe(0);
       expect(result.breakdown.saidTrust.score).toBe(0);
@@ -271,10 +266,9 @@ describe('BAGS Reputation Service', () => {
 
   describe('refreshAndStoreScore', () => {
     it('should call computeBagsScore and updateBagsScore', async () => {
-      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
-      
       getAgent.mockResolvedValue({
-        pubkey,
+        agent_id: TEST_AGENT_ID,
+        pubkey: TEST_PUBKEY,
         token_mint: null,
         registered_at: new Date()
       });
@@ -283,13 +277,13 @@ describe('BAGS Reputation Service', () => {
       getAgentActions.mockResolvedValue({ total: 0, successful: 0, failed: 0 });
       getSAIDTrustScore.mockRejectedValue(new Error('API error'));
       getUnresolvedFlagCount.mockResolvedValue(0);
-      updateBagsScore.mockResolvedValue({ pubkey, bags_score: 10 });
+      updateBagsScore.mockResolvedValue({ agent_id: TEST_AGENT_ID, bags_score: 10 });
 
-      const result = await refreshAndStoreScore(pubkey);
+      const result = await refreshAndStoreScore(TEST_AGENT_ID);
 
       expect(result).toHaveProperty('agent');
       expect(result).toHaveProperty('scoreData');
-      expect(updateBagsScore).toHaveBeenCalledWith(pubkey, expect.any(Number));
+      expect(updateBagsScore).toHaveBeenCalledWith(TEST_AGENT_ID, expect.any(Number));
     });
   });
 });

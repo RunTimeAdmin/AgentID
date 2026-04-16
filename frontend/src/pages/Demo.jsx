@@ -128,6 +128,7 @@ export default function Demo() {
     categories: ['utility'],
   });
   const [registeredAgent, setRegisteredAgent] = useState(null);
+  const [agentId, setAgentId] = useState(null);
   const [challengeData, setChallengeData] = useState(null);
   const [signature, setSignature] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
@@ -179,6 +180,9 @@ export default function Demo() {
 
       const response = await registerAgent(registrationData);
       setRegisteredAgent(response);
+      // Store agentId from response (could be in different locations depending on API structure)
+      const newAgentId = response.agent?.agentId || response.agent_id || response.agentId || response.id;
+      setAgentId(newAgentId);
       setCurrentStep(3);
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -193,7 +197,7 @@ export default function Demo() {
     setError(null);
 
     try {
-      const response = await issueChallenge(getPublicKeyBase58());
+      const response = await issueChallenge(agentId);
       setChallengeData(response);
     } catch (err) {
       setError(err.message || 'Failed to request challenge. Please try again.');
@@ -218,7 +222,7 @@ export default function Demo() {
 
     try {
       const response = await verifyChallenge(
-        getPublicKeyBase58(),
+        agentId,
         challengeData.nonce,
         signature
       );
@@ -236,7 +240,7 @@ export default function Demo() {
     setLoading({ ...loading, badge: true });
 
     try {
-      const response = await getBadge(getPublicKeyBase58());
+      const response = await getBadge(agentId);
       setBadgeData(response);
     } catch (err) {
       setError(err.message || 'Failed to fetch badge. Please try again.');
@@ -250,6 +254,7 @@ export default function Demo() {
     setCurrentStep(1);
     setKeypair(null);
     setRegisteredAgent(null);
+    setAgentId(null);
     setChallengeData(null);
     setSignature(null);
     setVerificationResult(null);
@@ -299,7 +304,7 @@ export default function Demo() {
   );
 
   const embedCode = `<iframe 
-  src="${window.location.origin}/widget/${getPublicKeyBase58()}" 
+  src="${window.location.origin}/widget/${agentId}" 
   width="320" 
   height="120" 
   frameborder="0"
@@ -571,7 +576,7 @@ export default function Demo() {
                   curl={`curl -X POST http://localhost:3000/api/verify/challenge \\
   -H "Content-Type: application/json" \\
   -d '{
-    "pubkey": "${getPublicKeyBase58()}"
+    "agentId": "${agentId}"
   }'`}
                 />
               </div>
@@ -628,7 +633,7 @@ export default function Demo() {
                 curl={`curl -X POST http://localhost:3000/api/verify/response \\
   -H "Content-Type: application/json" \\
   -d '{
-    "pubkey": "${getPublicKeyBase58()}",
+    "agentId": "${agentId}",
     "nonce": "${challengeData?.nonce}",
     "signature": "${signature?.slice(0, 20)}..."
   }'`}
@@ -705,16 +710,16 @@ export default function Demo() {
                   <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-3">SVG Badge</div>
                   <div className="flex items-center justify-center p-6 bg-[var(--bg-primary)] rounded-xl">
                     <img
-                      src={`/api/badge/${getPublicKeyBase58()}/svg`}
+                      src={`/api/badge/${agentId}/svg`}
                       alt="Agent Trust Badge"
                       className="max-w-full h-auto"
                     />
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     <code className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-primary)] font-mono text-xs text-[var(--text-secondary)] truncate">
-                      {window.location.origin}/api/badge/{getPublicKeyBase58()}/svg
+                      {window.location.origin}/api/badge/{agentId}/svg
                     </code>
-                    <CopyButton text={`${window.location.origin}/api/badge/${getPublicKeyBase58()}/svg`} />
+                    <CopyButton text={`${window.location.origin}/api/badge/${agentId}/svg`} />
                   </div>
                 </div>
 
@@ -731,7 +736,7 @@ export default function Demo() {
 
                 <ApiCallSection
                   title="See the API call"
-                  curl={`curl http://localhost:3000/api/badge/${getPublicKeyBase58()}`}
+                  curl={`curl http://localhost:3000/api/badge/${agentId}`}
                 />
               </div>
             )}
