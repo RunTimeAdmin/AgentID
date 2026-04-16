@@ -23,11 +23,12 @@
 
 ## Update Summary
 **Changes Made**
-- Integrated new Security page with comprehensive security and trust information
-- Enhanced frontend routing system with Security page integration in both desktop and mobile navigation menus
-- Updated navigation to include Security route with proper active state highlighting
-- Added Security page component with detailed security model explanation, attack protections, and best practices
-- Enhanced footer navigation links with Security page integration
+- Updated terminology throughout the application from "Solana wallet address" to "Ed25519 public key" for cryptographic identity verification
+- Enhanced frontend with comprehensive Security page featuring detailed cryptographic security model, attack protections, and best practices
+- Improved registration process with better Ed25519 key validation and clearer instructions
+- Enhanced flagging process with cryptographic authentication using Ed25519 signatures
+- Added tiered trust badge system with premium verified agents featuring gold-themed styling and shimmer animations
+- Integrated Security page into navigation system with proper active state highlighting
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -42,7 +43,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the AgentID frontend React application, focusing on the user interface and component architecture. It explains the routing configuration, state management approach, and styling strategy using TailwindCSS. It documents the key pages (Registry, AgentDetail, Register, Discover, Demo, Security), reusable components (TrustBadge, ReputationBreakdown, CapabilityList, FlagModal), and integration patterns with the backend API. It also covers user workflows, form handling, error states, and responsive design considerations. **The application now features a comprehensive Security page that provides detailed information about AgentID's cryptographic security model, attack protections, and best practices for agent operators.**
+This document describes the AgentID frontend React application, focusing on the user interface and component architecture. It explains the routing configuration, state management approach, and styling strategy using TailwindCSS. It documents the key pages (Registry, AgentDetail, Register, Discover, Demo, Security), reusable components (TrustBadge, ReputationBreakdown, CapabilityList, FlagModal), and integration patterns with the backend API. It also covers user workflows, form handling, error states, and responsive design considerations. **The application now features a comprehensive Security page that provides detailed information about AgentID's cryptographic security model, attack protections, and best practices for agent operators, with corrected terminology emphasizing Ed25519 public key cryptography throughout.**
 
 ## Project Structure
 The frontend is a Vite-powered React application with:
@@ -139,7 +140,7 @@ NAV --> SECURITY
 - Pages:
   - Registry: Browse agents with filters, pagination, and loading/error states.
   - AgentDetail: View agent profile, reputation, capabilities, flags/attestations, and flag submission with cryptographic authentication.
-  - Register: Multi-step agent onboarding with challenge-response and metadata collection.
+  - Register: Multi-step agent onboarding with challenge-response and metadata collection using Ed25519 public keys.
   - Discover: Capability-based agent discovery with suggestions and ranking.
   - Demo: Interactive demonstration of the complete verification workflow with step-by-step guidance.
   - **New** Security: Comprehensive security and trust page explaining AgentID's cryptographic security model, attack protections, resolved findings, and best practices for agent operators.
@@ -149,7 +150,7 @@ NAV --> SECURITY
   - CapabilityList: Capability tags with categorization and icons.
   - FlagModal: Enhanced controlled modal for reporting agents with Ed25519 signature requirements and cryptographic authentication.
 
-**Updated** Added comprehensive Security page that provides detailed information about AgentID's cryptographic security model, attack protections, resolved findings, and best practices. Navigation now includes Security route with proper active state highlighting in both desktop and mobile views.
+**Updated** Added comprehensive Security page that provides detailed information about AgentID's cryptographic security model, attack protections, and best practices. Navigation now includes Security route with proper active state highlighting in both desktop and mobile views. All terminology has been corrected to use "Ed25519 public key" instead of "Solana wallet address".
 
 **Section sources**
 - [App.jsx:7-193](file://frontend/src/App.jsx#L7-L193)
@@ -165,7 +166,7 @@ NAV --> SECURITY
 - [FlagModal.jsx:4-258](file://frontend/src/components/FlagModal.jsx#L4-L258)
 
 ## Architecture Overview
-The app uses React Router for client-side routing and a shared Axios-based API client for backend integration. Pages orchestrate state and render reusable components. Styling relies on TailwindCSS with a custom dark theme and glass morphism effects. **The new Security page provides comprehensive security transparency, explaining cryptographic implementations, attack protections, and best practices for agent operators.**
+The app uses React Router for client-side routing and a shared Axios-based API client for backend integration. Pages orchestrate state and render reusable components. Styling relies on TailwindCSS with a custom dark theme and glass morphism effects. **The new Security page provides comprehensive security transparency, explaining cryptographic implementations, attack protections, and best practices for agent operators using corrected Ed25519 terminology throughout.**
 
 ```mermaid
 sequenceDiagram
@@ -204,7 +205,7 @@ C-->>P : Display security-related information
 - Navigation highlights active route and includes responsive mobile menu with Security route integration.
 - **Updated** Security page is now accessible from both desktop and mobile navigation menus with proper active state highlighting.
 
-**Updated** Added Security route with dedicated navigation elements and styling for comprehensive security transparency. Security page provides detailed information about cryptographic security model, attack protections, and best practices.
+**Updated** Added Security route with dedicated navigation elements and styling for comprehensive security transparency. Security page provides detailed information about cryptographic security model, attack protections, and best practices. All navigation elements now use "Ed25519 public key" terminology consistently.
 
 **Section sources**
 - [App.jsx:1-193](file://frontend/src/App.jsx#L1-L193)
@@ -257,7 +258,7 @@ ShowSkeletons --> End
   - Handles 404 and generic errors with dedicated UI.
 - Backend integration: getAgent, getBadge, getReputation, getAttestations, getFlags, flagAgent.
 
-**Updated** Enhanced TrustBadge rendering to display tier information for verified agents with gold-themed styling and shimmer animations.
+**Updated** Enhanced TrustBadge rendering to display tier information for verified agents with gold-themed styling and shimmer animations. All agent detail pages now consistently use "Ed25519 public key" terminology.
 
 ```mermaid
 sequenceDiagram
@@ -291,21 +292,23 @@ D->>D : Update flags state
 ### Register Page
 - State: currentStep, formData, errors, serverError, submitting, registeredAgent.
 - Workflow:
-  - Step 1: Collect pubkey and name; validates inputs.
+  - Step 1: Collect pubkey and name; validates Ed25519 public key inputs.
   - Step 2: Fetch challenge via issueChallenge, user signs challenge, enters signature.
   - Step 3: Optional metadata (tokenMint, capabilities, creatorXHandle, creatorWallet, description).
   - Step 4: Review and submit registration via registerAgent.
 - Backend integration: registerAgent, issueChallenge.
 
+**Updated** Enhanced validation to specifically check for Ed25519 public key format and provide clear guidance on cryptographic key management. All registration forms now use "Ed25519 public key" terminology consistently.
+
 ```mermaid
 flowchart TD
-Start(["Start Register"]) --> Step1["Enter pubkey and name"]
-Step1 --> Validate1{"Valid?"}
-Validate1 --> |No| ShowErr1["Show validation errors"] --> Step1
+Start(["Start Register"]) --> Step1["Enter Ed25519 public key and name"]
+Step1 --> Validate1{"Valid Ed25519 public key?"}
+Validate1 --> |No| ShowErr1["Show validation errors for Ed25519 format"]
 Validate1 --> |Yes| Issue["issueChallenge(pubkey)"]
-Issue --> Step2["Paste signature"]
+Issue --> Step2["Paste Ed25519 signature"]
 Step2 --> Validate2{"Signature present?"}
-Validate2 --> |No| ShowErr2["Show validation error"] --> Step2
+Validate2 --> |No| ShowErr2["Show validation error for signature"]
 Validate2 --> |Yes| Step3["Add optional metadata"]
 Step3 --> Step4["Review and submit"]
 Step4 --> Submit["registerAgent(...)"]
@@ -367,7 +370,7 @@ HasResults --> |Yes| RenderResults["Render ranked cards with capabilities and en
 
 ```mermaid
 flowchart TD
-Start(["Demo Start"]) --> Step1["Generate Keypair (browser)"]
+Start(["Demo Start"]) --> Step1["Generate Ed25519 Keypair (browser)"]
 Step1 --> Step2["Register Agent"]
 Step2 --> Step3["Challenge & Sign"]
 Step3 --> Step4["Verify Signature"]
@@ -394,7 +397,7 @@ Step5 --> End(["Complete"])
 - **Known Limitations**: Transparent disclosure of ongoing improvements and future roadmap items.
 - **Best Practices**: Practical guidance for agent operators on secure key management and operational security.
 
-**Updated** Security page provides comprehensive security transparency and educational content for users and operators.
+**Updated** Security page provides comprehensive security transparency and educational content for users and operators. All security documentation now consistently uses "Ed25519 public key" terminology.
 
 ```mermaid
 flowchart TD
@@ -426,7 +429,7 @@ Best --> End(["Complete"])
 - Renders a visually distinct card per status with enhanced tier-based styling and gradient glow effects.
 - Uses Tailwind utilities and CSS variables for theming with shimmer animation support.
 
-**Updated** Added tier configuration system with verified tier styling, shimmer animations, and gold-themed visual indicators for premium verified agents.
+**Updated** Added tier configuration system with verified tier styling, shimmer animations, and gold-themed visual indicators for premium verified agents. All TrustBadge instances now use "Ed25519 public key" terminology consistently.
 
 **Section sources**
 - [TrustBadge.jsx:42-196](file://frontend/src/components/TrustBadge.jsx#L42-L196)
@@ -458,6 +461,8 @@ Best --> End(["Complete"])
   - **Validation Improvements**: Validates signature presence and provides clear error messages for cryptographic requirements.
   - **Integration Flow**: Submits {reason, evidence, reporterPubkey, signature, timestamp} to onSubmit callback.
 
+**Updated** Enhanced FlagModal to use "Ed25519 public key" terminology and improved cryptographic authentication flow. All flag submission processes now consistently reference Ed25519 signatures and public keys.
+
 **Section sources**
 - [FlagModal.jsx:4-258](file://frontend/src/components/FlagModal.jsx#L4-L258)
 
@@ -486,7 +491,7 @@ Best --> End(["Complete"])
   - Animations (fade-in, slide-in, pulse-glow, shimmer).
 - Responsive design uses Tailwind's responsive prefixes and flex/grid layouts.
 
-**Updated** Added shimmer animation support and gold-themed visual indicators for premium verified agents.
+**Updated** Added shimmer animation support and gold-themed visual indicators for premium verified agents. All styling now consistently uses "Ed25519 public key" terminology in tooltips and help text.
 
 **Section sources**
 - [index.css:1-173](file://frontend/src/index.css#L1-L173)
@@ -546,7 +551,7 @@ Vite --> React
 - Network errors:
   - Check proxy configuration (/api to backend) and CORS settings.
 - Form validation:
-  - Register step 1 requires valid pubkey and name; step 2 requires signature.
+  - Register step 1 requires valid Ed25519 public key and name; step 2 requires signature.
   - **Enhanced** FlagModal validation: Requires reason, reporterPubkey, signature, and optional JSON evidence; signature must be base58-encoded Ed25519 signature.
 - Error boundaries:
   - Pages render explicit error banners and empty states for graceful degradation.
@@ -555,7 +560,7 @@ Vite --> React
   - Verify responsive design works correctly across all screen sizes.
   - Check that security data displays properly without performance issues.
 - **New** Cryptographic Authentication Issues:
-  - Ensure reporterPubkey follows Solana wallet address format.
+  - Ensure reporterPubkey follows Ed25519 public key format (base58-encoded).
   - Verify signature is generated using Ed25519 private key and base58 encoding.
   - Confirm message format matches `AGENTID-FLAG:{agentPubkey}:{reporterPubkey}:{timestamp}`.
   - Check timestamp is current and included in authentication.
@@ -563,6 +568,9 @@ Vite --> React
   - Ensure tweetnacl and bs58 libraries are properly loaded for keypair generation.
   - Verify browser supports WebCrypto API for cryptographic operations.
   - Check that API endpoints are accessible for registration and verification steps.
+- **New** Terminology Issues:
+  - Ensure all user-facing text consistently uses "Ed25519 public key" instead of "Solana wallet address".
+  - Verify cryptographic terminology is consistent throughout registration, flagging, and security documentation.
 
 **Section sources**
 - [api.js:23-33](file://frontend/src/lib/api.js#L23-L33)
@@ -573,16 +581,16 @@ Vite --> React
 - [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
 
 ## Conclusion
-The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management. **The addition of the comprehensive Security page significantly enhances the application's transparency and trustworthiness by providing detailed information about AgentID's cryptographic security model, attack protections, and best practices. The enhanced navigation system now includes Security route integration in both desktop and mobile views, making security information easily accessible to all users.**
+The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management. **The addition of the comprehensive Security page significantly enhances the application's transparency and trustworthiness by providing detailed information about AgentID's cryptographic security model, attack protections, and best practices. The enhanced navigation system now includes Security route integration in both desktop and mobile views, making security information easily accessible to all users. All terminology has been corrected to use "Ed25519 public key" consistently throughout the application, reflecting the cryptographic nature of the platform.**
 
 ## Appendices
 
 ### Component Usage Examples
 - Registry: Pass TrustBadge to each agent card; apply className for sizing; TrustBadge now supports tier styling.
 - AgentDetail: Compose TrustBadge with tier information, ReputationBreakdown, CapabilityList; embed FlagModal with callbacks; TrustBadge displays enhanced tier styling.
-- Register: Use FormField, TextAreaField, CapabilitiesInput; manage multi-step state transitions.
+- Register: Use FormField, TextAreaField, CapabilitiesInput; manage multi-step state transitions with Ed25519 public key validation.
 - Discover: Render suggested capabilities and clickable chips; pass results to result cards with enhanced TrustBadge visuals.
-- Demo: Interactive demonstration of complete verification workflow with step-by-step guidance.
+- Demo: Interactive demonstration of complete verification workflow with step-by-step guidance using Ed25519 keypair generation.
 - **New** Security: Comprehensive security transparency page with detailed explanations of cryptographic security model and best practices.
 
 ### Customization Options
@@ -646,3 +654,18 @@ The AgentID frontend is a modular, theme-consistent React application with clear
 
 **Section sources**
 - [App.jsx:30-78](file://frontend/src/App.jsx#L30-L78)
+
+### Terminology Corrections
+**New** All user-facing terminology has been updated to reflect the cryptographic nature of the platform:
+
+1. **Ed25519 Public Key**: Replaced "Solana wallet address" with "Ed25519 public key" throughout registration, flagging, and security documentation
+2. **Cryptographic Identity**: Emphasizes that Ed25519 public keys serve as cryptographic identity rather than traditional wallet addresses
+3. **Signature Verification**: Consistent use of "Ed25519 signature" instead of "wallet signature"
+4. **Key Management**: Updated guidance to emphasize secure Ed25519 keypair generation and storage
+5. **Verification Workflow**: All steps now reference Ed25519 cryptographic verification procedures
+
+**Section sources**
+- [Register.jsx:275](file://frontend/src/pages/Register.jsx#L275)
+- [Register.jsx:429](file://frontend/src/pages/Register.jsx#L429)
+- [FlagModal.jsx:126](file://frontend/src/components/FlagModal.jsx#L126)
+- [Security.jsx:312](file://frontend/src/pages/Security.jsx#L312)

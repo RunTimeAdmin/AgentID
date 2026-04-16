@@ -2,20 +2,29 @@
 
 <cite>
 **Referenced Files in This Document**
+- [Security.jsx](file://frontend/src/pages/Security.jsx)
 - [Security-Implementation.md](file://AgentID-wiki-temp/Security-Implementation.md)
 - [Architecture-Security.md](file://AgentID-wiki-temp/Architecture-Security.md)
 - [Service-Authentication-Services.md](file://AgentID-wiki-temp/Service-Authentication-Services.md)
-- [rateLimit.js](file://backend/src/middleware/rateLimit.js)
-- [errorHandler.js](file://backend/src/middleware/errorHandler.js)
 - [bagsAuthVerifier.js](file://backend/src/services/bagsAuthVerifier.js)
 - [pkiChallenge.js](file://backend/src/services/pkiChallenge.js)
+- [rateLimit.js](file://backend/src/middleware/rateLimit.js)
+- [errorHandler.js](file://backend/src/middleware/errorHandler.js)
 - [queries.js](file://backend/src/models/queries.js)
 - [server.js](file://backend/server.js)
-- [Security.jsx](file://frontend/src/pages/Security.jsx)
 - [api.js](file://frontend/src/lib/api.js)
 - [TrustBadge.jsx](file://frontend/src/components/TrustBadge.jsx)
 - [index.js](file://backend/src/config/index.js)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced comprehensive security page implementation with detailed Ed25519 public key terminology
+- Added challenge-response flow visualization with attack prevention scenarios
+- Implemented database transparency table with detailed data storage policies
+- Integrated attack scenario analysis with concrete threat mitigation examples
+- Added security best practices for agent operators with practical guidance
+- Updated frontend security components with interactive elements and visualizations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -36,6 +45,8 @@
 The AgentID Security Page provides comprehensive documentation of the platform's security architecture, focusing on cryptographic verification using Ed25519 signatures, defense-in-depth security measures, and transparency about known limitations. This page serves as both a technical reference for developers and a security assurance document for operators and stakeholders.
 
 AgentID implements a multi-layered security approach built on mathematical proof of identity rather than trust-based systems. The platform never requests, receives, or stores private keys, ensuring that cryptographic verification occurs entirely within the operator's infrastructure.
+
+**Updated** Enhanced with comprehensive security page implementation featuring detailed Ed25519 public key terminology and attack scenario analysis.
 
 ## Security Architecture Overview
 
@@ -239,14 +250,18 @@ function escapeHtml(text) {
 
 ### Data Storage Transparency
 
-| Data Type | Stored | Details |
-|-----------|--------|---------|
-| Public Key | Yes | Ed25519 public key (32 bytes) |
-| Name & Description | Yes | Self-asserted metadata |
-| Reputation Score | Yes | Aggregated from external sources |
-| Private Key | Never | Cryptographically protected |
-| IP Address / Email | Never | No personally identifiable information |
-| Challenge Nonces | Temporary | 5-minute TTL, auto-deleted |
+**Updated** Comprehensive database transparency table with detailed data classification and storage policies:
+
+| Data Type | Stored | Classification | Details |
+|-----------|--------|----------------|---------|
+| Public Key | Yes | Sensitive | Ed25519 public key (32 bytes) - essential for verification |
+| Name & Description | Yes | Self-asserted | Self-reported metadata during registration |
+| Reputation Score | Yes | Aggregate | Aggregated from external sources (BAGS, SAID) |
+| Private Key | Never | Never Stored | Cryptographically protected - never transmitted |
+| IP Address / Email | Never | No PII | No personally identifiable information collected |
+| Challenge Nonces | Temporary | Transient | 5-minute TTL, auto-deleted after use/expiry |
+| API Keys | Temporary | Server-side | Generated for external service integration |
+| Verification Records | Temporary | Audit Trail | Challenge/response pairs with timestamps |
 
 **Section sources**
 - [Security-Implementation.md:86-118](file://AgentID-wiki-temp/Security-Implementation.md#L86-L118)
@@ -370,13 +385,14 @@ TrustBadge --> TierConfig : "uses"
 
 ### Security Page Implementation
 
-The Security page serves as a comprehensive security documentation hub with interactive elements:
+**Updated** The Security page serves as a comprehensive security documentation hub with interactive elements and detailed security visualizations:
 
-- **Core Guarantee Cards**: Three-column layout highlighting fundamental security principles
-- **Verification Flow**: Four-step process visualization with attack prevention explanations
-- **Data Transparency Table**: Clear breakdown of what data is stored and why
-- **Attack Protections Grid**: Visual presentation of security measures
-- **Audit Information**: Links to security audit reports and documentation
+- **Core Guarantee Cards**: Three-column layout highlighting fundamental security principles with visual icons
+- **Verification Flow**: Four-step process visualization with attack prevention explanations and real-time security demonstrations
+- **Data Transparency Table**: Interactive table showing what data is stored, why it's stored, and how long it persists
+- **Attack Protections Grid**: Visual presentation of security measures with severity ratings and status indicators
+- **Audit Information**: Links to security audit reports and comprehensive documentation
+- **Best Practices**: Practical guidance for agent operators with step-by-step security recommendations
 
 **Section sources**
 - [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
@@ -385,20 +401,24 @@ The Security page serves as a comprehensive security documentation hub with inte
 
 ### Resolved Security Findings
 
+**Updated** Comprehensive tracking of resolved security findings with detailed implementation details:
+
 | Finding | Status | Resolution | Timeline |
 |---------|--------|------------|----------|
-| Flag Proof-of-Ownership | Resolved | Ed25519 signature verification required | Fixed |
-| Rate Limiter Upgrade | Resolved | Stricter authLimiter for sensitive endpoints | Fixed |
-| Startup Validation | Resolved | Environment variable validation at startup | Fixed |
+| Flag Proof-of-Ownership | Resolved | Ed25519 signature verification required for all flag submissions | Fixed |
+| Rate Limiter Upgrade | Resolved | Stricter authLimiter now applied to sensitive endpoints | Fixed |
+| Startup Validation | Resolved | Environment variable validation at startup with clear error messages | Fixed |
 
 ### Active Security Improvements
 
-| Issue | Severity | Status | Target Sprint |
-|-------|----------|--------|---------------|
-| Self-Asserted Metadata | Medium | Planned | Sprint 3 |
-| No Key Revocation | Medium | Planned | Sprint 3 |
-| Database Breach Risk | Standard | Mitigated | Standard |
-| SAID Gateway Dependency | Low | Mitigated | Monitored |
+**Updated** Detailed roadmap of active security improvements with severity classifications:
+
+| Issue | Severity | Status | Target Sprint | Implementation Details |
+|-------|----------|--------|---------------|----------------------|
+| Self-Asserted Metadata | Medium | Planned | Sprint 3 | Social verification through attestations from trusted entities |
+| No Key Revocation | Medium | Planned | Sprint 3 | Multi-signature recovery and key rotation workflows |
+| Database Breach Risk | Standard | Mitigated | Standard | Parameterized statements, VPN access, no sensitive data stored |
+| SAID Gateway Dependency | Low | Mitigated | Monitored | Graceful degradation with external API dependency |
 
 **Section sources**
 - [Security.jsx:457-601](file://frontend/src/pages/Security.jsx#L457-L601)
@@ -407,24 +427,45 @@ The Security page serves as a comprehensive security documentation hub with inte
 
 ### Secret Management
 
+**Updated** Enhanced secret management practices with comprehensive guidance:
+
 - **Never commit secrets** to version control systems
 - **Use environment variables** for configuration management
 - **Rotate API keys regularly** as part of operational procedures
 - **Implement secrets management** in production environments
+- **Store private keys securely** using hardware security modules or cloud key management services
 
 ### Infrastructure Security
+
+**Updated** Comprehensive infrastructure security guidelines:
 
 - **Enable HTTPS** with TLS 1.2+ in production deployments
 - **Use valid SSL certificates** from trusted Certificate Authorities
 - **Implement HSTS** headers for automatic HTTPS enforcement
 - **Configure proper firewall rules** restricting access to database and cache
+- **Use VPN access** for database administration and maintenance
+- **Implement network segmentation** separating critical services
 
 ### Monitoring and Auditing
 
-- **Monitor authentication failures** for brute force attempts
+**Updated** Advanced monitoring and auditing practices:
+
+- **Monitor authentication failures** for brute force attempts and suspicious patterns
 - **Track rate limit violations** for potential abuse detection
 - **Monitor unusual traffic patterns** indicative of security incidents
-- **Review error logs** for security-related anomalies
+- **Review error logs** for security-related anomalies and error spikes
+- **Implement security event logging** with detailed audit trails
+- **Set up alerting** for security-sensitive events and threshold breaches
+
+### Agent Operator Security
+
+**Updated** Comprehensive security guidance for agent operators:
+
+- **Generate Keypairs Securely**: Use established libraries like tweetnacl or libsodium in air-gapped environments
+- **Protect Your Private Key**: Store in secure hardware wallets or cloud key management services
+- **If Compromised: Act Fast**: Immediately register new agent with fresh keypair, flag compromised agent, contact support
+- **Operational Security**: Rotate keys periodically, monitor reputation scores, use dedicated keypairs for different environments
+- **Network Security**: Implement proper firewall rules and network segmentation for agent infrastructure
 
 **Section sources**
 - [Security-Implementation.md:182-223](file://AgentID-wiki-temp/Security-Implementation.md#L182-L223)
@@ -433,6 +474,8 @@ The Security page serves as a comprehensive security documentation hub with inte
 
 The AgentID security architecture represents a comprehensive approach to decentralized identity verification that prioritizes cryptographic proof over trust-based systems. By implementing Ed25519 signatures, multi-layered protection, and transparent security practices, AgentID provides a robust foundation for secure agent identity management.
 
-The platform's commitment to transparency is evident in its detailed security documentation, formal security audit, and ongoing improvement roadmap. While some limitations exist, they are actively being addressed through the documented improvement plans.
+The platform's commitment to transparency is evident in its detailed security documentation, formal security audit, and ongoing improvement roadmap. The comprehensive security page implementation demonstrates how modern web applications can effectively communicate complex security concepts to both technical and non-technical audiences.
 
-The security measures implemented in AgentID serve as a model for decentralized identity systems, demonstrating how cryptographic verification can eliminate the need for centralized trust while maintaining strong security guarantees.
+While some limitations exist, they are actively being addressed through the documented improvement plans. The security measures implemented in AgentID serve as a model for decentralized identity systems, demonstrating how cryptographic verification can eliminate the need for centralized trust while maintaining strong security guarantees.
+
+The interactive security page with detailed attack scenario analysis, comprehensive data transparency, and practical best practices provides operators with the information needed to make informed security decisions and implement robust security measures for their agent infrastructure.

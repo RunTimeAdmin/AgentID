@@ -14,18 +14,22 @@
 - [api.js](file://frontend/src/lib/api.js)
 - [main.jsx](file://frontend/src/main.jsx)
 - [App.jsx](file://frontend/src/App.jsx)
+- [Security.jsx](file://frontend/src/pages/Security.jsx)
 - [agentid_build_plan.md](file://agentid_build_plan.md)
 - [DEPLOYMENT_GUIDE.md](file://docs/DEPLOYMENT_GUIDE.md)
 - [deploy.sh](file://deploy.sh)
+- [SecurityPage.html](file://SecurityPage.html)
+- [register-infrawatch-prod.js](file://register-infrawatch-prod.js)
+- [test-register.js](file://test-register.js)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added critical Nginx reverse proxy configuration fix documentation with `app.set('trust proxy', 1)` in backend/server.js
-- Enhanced security middleware section to explain proper client IP detection behind reverse proxies
-- Updated troubleshooting guide to include proxy-related issues and solutions
-- Expanded deployment architecture documentation with trust proxy configuration details
-- Added security considerations for rate limiting and client IP accuracy
+- Enhanced automated deployment script documentation to include new security page integration and registration automation scripts
+- Updated deployment architecture to reflect the new Security page route and static asset serving
+- Added documentation for registration automation scripts including InfraWatch production registration and testing utilities
+- Expanded deployment verification steps to include security page accessibility testing
+- Updated troubleshooting guide to include security page specific diagnostics
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -35,21 +39,22 @@
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Production Deployment Guide](#production-deployment-guide)
 7. [Automated Deployment Script](#automated-deployment-script)
-8. [Dependency Analysis](#dependency-analysis)
-9. [Performance Considerations](#performance-considerations)
-10. [Troubleshooting Guide](#troubleshooting-guide)
-11. [Conclusion](#conclusion)
-12. [Appendices](#appendices)
+8. [Registration Automation Scripts](#registration-automation-scripts)
+9. [Dependency Analysis](#dependency-analysis)
+10. [Performance Considerations](#performance-considerations)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
+13. [Appendices](#appendices)
 
 ## Introduction
 This document provides comprehensive build and deployment guidance for the AgentID system. It covers the frontend build process (Vite compilation, asset optimization, bundle analysis, and static asset generation), backend deployment (Node.js application setup, process management with PM2, and server configuration), and the deployment architecture (Nginx server blocks, SSL certificate configuration with Certbot, and reverse proxy setup). It also includes CI/CD pipeline considerations, automated testing integration, deployment automation strategies, load balancing setup, monitoring configuration, rollback procedures, scaling considerations, performance optimization, and maintenance procedures for production deployments.
 
-**Updated** Enhanced with critical Nginx reverse proxy configuration fix documentation and improved security middleware implementation for proper client IP detection.
+**Updated** Enhanced with new security page integration, registration automation scripts, and expanded deployment verification procedures.
 
 ## Project Structure
 The AgentID project is organized into two primary areas:
 - Backend: Node.js/Express application with routing, middleware, database, and Redis integration.
-- Frontend: React/Vite application serving the registry explorer UI and embeddable widget.
+- Frontend: React/Vite application serving the registry explorer UI, security page, and embeddable widget.
 
 ```mermaid
 graph TB
@@ -67,10 +72,12 @@ F_pkg["frontend/package.json"]
 F_vite["vite.config.js"]
 F_main["src/main.jsx"]
 F_app["src/App.jsx"]
+F_security["src/pages/Security.jsx"]
 F_api["src/lib/api.js"]
 end
 F_vite --> F_main
 F_main --> F_app
+F_app --> F_security
 F_app --> F_api
 F_api --> B_srv
 B_srv --> B_cfg
@@ -90,7 +97,8 @@ B_srv --> B_rd
 - [frontend/package.json:1-35](file://frontend/package.json#L1-L35)
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 - [main.jsx:1-11](file://frontend/src/main.jsx#L1-L11)
-- [App.jsx:1-107](file://frontend/src/App.jsx#L1-L107)
+- [App.jsx:1-189](file://frontend/src/App.jsx#L1-L189)
+- [Security.jsx:1-779](file://frontend/src/pages/Security.jsx#L1-L779)
 - [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
 
 **Section sources**
@@ -102,7 +110,7 @@ B_srv --> B_rd
 - Data persistence: PostgreSQL connection pool with production SSL handling and robust error logging.
 - Caching: Redis client with retry strategy, offline queue, and cache helpers for badge and challenge storage.
 - Middleware: Rate limiting with configurable windows and limits, plus a global error handler.
-- Frontend: React application built with Vite, Tailwind, and React Router, with an Axios-based API client that proxies to the backend via /api.
+- Frontend: React application built with Vite, Tailwind, and React Router, featuring a comprehensive Security page with cryptographic verification details and registration automation support.
 
 **Section sources**
 - [server.js:1-107](file://backend/server.js#L1-L107)
@@ -116,7 +124,7 @@ B_srv --> B_rd
 - [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
 
 ## Architecture Overview
-The deployment architecture centers around a Node.js/Express backend exposed via Nginx reverse proxy with SSL termination handled by Certbot. The frontend is served statically by Nginx after Vite build. PM2 manages the backend process with environment-specific configuration. **Critical**: The backend now includes proper trust proxy configuration to ensure accurate client IP detection behind reverse proxies.
+The deployment architecture centers around a Node.js/Express backend exposed via Nginx reverse proxy with SSL termination handled by Certbot. The frontend is served statically by Nginx after Vite build, including the new Security page. PM2 manages the backend process with environment-specific configuration. **Critical**: The backend now includes proper trust proxy configuration to ensure accurate client IP detection behind reverse proxies.
 
 ```mermaid
 graph TB
@@ -125,8 +133,10 @@ Nginx["Nginx Reverse Proxy<br/>SSL Termination (Certbot)<br/>Proxy Headers"]
 API["AgentID API (Express)<br/>server.js<br/>Trust Proxy: 1"]
 DB["PostgreSQL"]
 Redis["Redis"]
+SecurityPage["Security Page<br/>Static Content"]
 Client --> Nginx
 Nginx --> API
+Nginx --> SecurityPage
 API --> DB
 API --> Redis
 Nginx --> Static["Static Assets (Vite Build Output)"]
@@ -141,17 +151,17 @@ Nginx --> Static["Static Assets (Vite Build Output)"]
 ## Detailed Component Analysis
 
 ### Frontend Build Process (Vite)
-- Build targets: Multi-page build with separate entry points for the main application and the widget.
+- Build targets: Multi-page build with separate entry points for the main application, Security page, and the widget.
 - Development server: Local port with proxy configuration to forward /api requests to the backend.
 - Plugins: React and Tailwind integrations; custom middleware to serve the widget entry for widget routes in development.
 - Asset optimization: Vite handles code splitting, minification, and asset hashing in production builds.
 - Bundle analysis: Recommended to integrate Vite bundle analyzers during CI for visibility into bundle composition.
-- Static asset generation: Production build outputs static assets under the Vite output directory for Nginx serving.
+- Static asset generation: Production build outputs static assets under the Vite output directory for Nginx serving, including the new Security page.
 
 ```mermaid
 flowchart TD
 Start(["Vite Build"]) --> ReadCfg["Read vite.config.js"]
-ReadCfg --> ResolveInputs["Resolve Inputs:<br/>index.html, widget.html"]
+ReadCfg --> ResolveInputs["Resolve Inputs:<br/>index.html, widget.html, security.html"]
 ResolveInputs --> Plugins["Apply Plugins:<br/>React, Tailwind, Widget Middleware"]
 Plugins --> DevProxy["Configure Dev Proxy:<br/>/api -> http://localhost:3002"]
 DevProxy --> BuildProd["Production Build"]
@@ -207,10 +217,10 @@ Express-->>PM2 : Ready (/health)
 - [errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
 
 ### Deployment Architecture (Nginx + SSL + Reverse Proxy)
-- Server blocks: Configure virtual hosts for the domain(s) hosting AgentID.
+- Server blocks: Configure virtual hosts for the domain(s) hosting AgentID, including security page routing.
 - SSL certificates: Provision and renew certificates using Certbot.
 - Reverse proxy: Forward /api requests to the backend service while serving static assets directly.
-- Static delivery: Serve frontend build artifacts from the Vite output directory.
+- Static delivery: Serve frontend build artifacts from the Vite output directory, including the new Security page.
 - Security headers: Enforce HTTPS, HSTS, and other security best practices via Nginx.
 - **Critical**: Proper trust proxy configuration ensures accurate client IP detection for rate limiting and security features.
 
@@ -220,9 +230,11 @@ D_Start(["Incoming Request"]) --> SSL{"HTTPS?<br/>Certbot"}
 SSL --> |No| Redirect["301 Redirect to HTTPS"]
 SSL --> |Yes| Route{"Path?"}
 Route --> |/api*| ProxyAPI["Proxy to Backend (PM2)<br/>with Trust Proxy Headers"]
-Route --> |Static Assets| Static["Serve from Vite Output"]
+Route --> |Security Page| Static["Serve Security Page<br/>from Vite Output"]
+Route --> |Static Assets| StaticAssets["Serve from Vite Output"]
 ProxyAPI --> D_End(["Response"])
 Static --> D_End
+StaticAssets --> D_End
 Redirect --> D_End
 ```
 
@@ -467,6 +479,16 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Security page route
+    location /security {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     # SPA fallback — all other routes serve the React app
     location / {
         try_files $uri $uri/ /index.html;
@@ -544,12 +566,16 @@ pm2 logs agentid --lines 20
 
 # Test the main site
 curl -I https://agentid.provenanceai.network
+
+# Test security page
+curl -I https://agentid.provenanceai.network/security
 ```
 
 Expected responses:
 - `/health` should return `{"status":"ok"}`
 - `/agents` should return a JSON array (empty `[]` initially)
 - PM2 list should show `agentid` as `online`
+- Security page should return `200 OK`
 
 ### Post-Deployment Tasks
 After successful deployment:
@@ -558,7 +584,8 @@ After successful deployment:
 2. **Test the Demo page** - Visit https://agentid.provenanceai.network/demo
 3. **Test badge endpoint** - Try `/badge/{agentId}` with a registered agent
 4. **Test widget** - Try `/widget/{agentId}` to verify widget rendering
-5. **Set up monitoring** - Consider adding AgentID to your existing monitoring infrastructure
+5. **Test security page** - Visit https://agentid.provenanceai.network/security to verify the new security documentation
+6. **Set up monitoring** - Consider adding AgentID to your existing monitoring infrastructure
 
 ### Future Updates
 When updating to a new version:
@@ -587,6 +614,8 @@ pm2 logs agentid --lines 10
 ### Script Overview
 The `deploy.sh` script automates deployment steps 2-10 from the production deployment guide, providing a one-shot deployment solution for Ubuntu 22.04 VPS environments.
 
+**Updated** Enhanced with improved error handling and expanded verification procedures including security page accessibility testing.
+
 ### Prerequisites
 Before running the script, edit the configuration section with your secure password and domain:
 
@@ -605,11 +634,11 @@ BACKEND_PORT=3002
 - **Dependency installation**: Installs backend and frontend dependencies
 - **Environment configuration**: Generates secure `.env` files with proper permissions
 - **Migration execution**: Runs database migrations automatically
-- **Frontend building**: Builds production frontend assets
-- **Nginx configuration**: Sets up SSL-enabled server blocks with proxy configuration
+- **Frontend building**: Builds production frontend assets including the new Security page
+- **Nginx configuration**: Sets up SSL-enabled server blocks with proxy configuration for all routes including security page
 - **SSL certificate**: Attempts automatic Certbot configuration with manual fallback
 - **PM2 management**: Starts backend with proper environment configuration
-- **Verification**: Tests health endpoints and displays useful commands
+- **Enhanced verification**: Tests health endpoints, agents endpoint, and security page accessibility
 
 ### Usage
 ```bash
@@ -634,11 +663,62 @@ The script includes comprehensive error handling:
 - **Root requirement**: Ensures script runs with appropriate privileges
 - **Safe directory handling**: Confirms directory removal if needed
 
+## Registration Automation Scripts
+
+### InfraWatch Production Registration Script
+The `register-infrawatch-prod.js` script automates the registration of InfraWatch as the first production agent on AgentID, demonstrating the complete challenge-response verification flow.
+
+**Features:**
+- Generates Ed25519 keypair using tweetnacl library
+- Implements cryptographic challenge-response verification
+- Handles base58 encoding/decoding for signatures
+- Provides step-by-step logging of the registration process
+- Outputs credentials for VPS environment configuration
+
+**Usage:**
+```bash
+node register-infrawatch-prod.js
+```
+
+**Section sources**
+- [register-infrawatch-prod.js:1-149](file://register-infrawatch-prod.js#L1-L149)
+
+### Test Registration Script
+The `test-register.js` script provides a testing utility for validating the registration flow with mock data.
+
+**Features:**
+- Generates valid base58-encoded public keys
+- Simulates complete registration flow
+- Tests challenge-response verification process
+- Provides detailed logging of API interactions
+
+**Usage:**
+```bash
+node test-register.js
+```
+
+**Section sources**
+- [test-register.js:1-73](file://test-register.js#L1-L73)
+
+### Security Page Integration
+The `SecurityPage.html` file provides a comprehensive security documentation page that complements the frontend Security component.
+
+**Features:**
+- Detailed explanation of cryptographic verification process
+- Database schema transparency with sensitivity ratings
+- Attack scenario analysis with prevention mechanisms
+- Security best practices for agent operators
+- Formal security audit documentation links
+
+**Section sources**
+- [SecurityPage.html:1-942](file://SecurityPage.html#L1-L942)
+
 ## Dependency Analysis
-The backend depends on configuration, database, and Redis modules. The frontend depends on Vite configuration and the Axios API client that proxies to the backend.
+The backend depends on configuration, database, and Redis modules. The frontend depends on Vite configuration, React Router for navigation, and the Axios API client that proxies to the backend. The Security page adds additional routing dependencies for the new security documentation route.
 
 ```mermaid
 graph LR
+F_app["frontend/src/App.jsx"] --> F_security["frontend/src/pages/Security.jsx"]
 F_api["frontend/src/lib/api.js"] --> B_srv["backend/server.js"]
 B_srv --> B_cfg["backend/src/config/index.js"]
 B_srv --> B_db["backend/src/models/db.js"]
@@ -648,6 +728,8 @@ B_srv --> B_err["backend/src/middleware/errorHandler.js"]
 ```
 
 **Diagram sources**
+- [App.jsx:1-189](file://frontend/src/App.jsx#L1-L189)
+- [Security.jsx:1-779](file://frontend/src/pages/Security.jsx#L1-L779)
 - [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
 - [server.js:1-107](file://backend/server.js#L1-L107)
 - [index.js:1-34](file://backend/src/config/index.js#L1-L34)
@@ -665,6 +747,7 @@ B_srv --> B_err["backend/src/middleware/errorHandler.js"]
 - Cache: Set appropriate TTLs for badges and challenges; monitor hit ratios and latency.
 - Frontend: Analyze bundle size and remove unused dependencies; leverage lazy loading for routes.
 - Network: Enable gzip/deflate and HTTP/2; consider CDN for static assets.
+- Security: The new Security page adds minimal overhead as it's served statically by Nginx.
 
 ## Troubleshooting Guide
 
@@ -720,6 +803,23 @@ curl http://localhost:3002/agents
 curl http://localhost:3002/discover
 ```
 
+### Security Page Specific Issues
+**Updated** Added troubleshooting steps for the new Security page integration:
+
+```bash
+# Check if security page is accessible
+curl -I http://localhost:3002/security
+
+# Verify static file serving
+ls -la /var/www/agentid/frontend/dist/security*
+
+# Check Nginx security page route
+sudo nginx -T | grep -A 10 -B 5 "location /security"
+
+# Test frontend security route
+curl -I https://agentid.provenanceai.network/security
+```
+
 ### Proxy and Rate Limiting Issues
 **Critical**: If you encounter rate limiting problems or incorrect client IP detection behind Nginx:
 
@@ -748,6 +848,8 @@ sudo nginx -T | grep -A 5 -B 5 "proxy_set_header"
 | Permission denied on `/var/www/agentid` | Check ownership: `sudo chown -R $USER:$USER /var/www/agentid` |
 | **Rate limiting issues** | **Verify trust proxy configuration in server.js** |
 | **Incorrect client IPs** | **Check Nginx proxy headers and trust proxy setting** |
+| **Security page not loading** | **Check Nginx security route configuration and static file serving** |
+| **Registration automation failures** | **Verify tweetnacl and bs58 dependencies are installed** |
 
 ### Security Checklist
 - [ ] Changed default database password
@@ -759,6 +861,8 @@ sudo nginx -T | grep -A 5 -B 5 "proxy_set_header"
 - [ ] Nginx security headers are in place
 - [ ] **Trust proxy configuration is properly set in server.js**
 - [ ] **Rate limiting respects client IP behind reverse proxy**
+- [ ] **Security page is accessible and properly routed**
+- [ ] **Registration automation scripts are functional**
 
 **Section sources**
 - [server.js:44-45](file://backend/server.js#L44-L45)
@@ -771,12 +875,19 @@ sudo nginx -T | grep -A 5 -B 5 "proxy_set_header"
 ## Conclusion
 The AgentID system combines a React/Vite frontend with a Node.js/Express backend, supported by PostgreSQL and Redis. For production, deploy behind Nginx with SSL managed by Certbot, run the backend with PM2, and implement CI/CD with automated testing and deployment automation. **Critical**: The backend now includes proper trust proxy configuration to ensure accurate client IP detection behind reverse proxies, which is essential for effective rate limiting and security features. The comprehensive deployment guide and automated script provide streamlined deployment processes for Ubuntu 22.04 VPS environments, ensuring reliable and repeatable production deployments with robust error handling, security practices, and proper reverse proxy support.
 
+**Updated** Enhanced with new security page integration, registration automation scripts, and expanded deployment verification procedures to support the comprehensive security documentation and automated agent registration workflows.
+
 ## Appendices
 - Environment variables and deployment notes are documented in the build plan, including database URLs, Redis configuration, CORS origins, and cache TTLs.
 - The automated deployment script provides a complete solution for production deployments with pre-flight checks, error handling, and verification steps.
 - **Trust proxy configuration is now a critical security feature that ensures proper client IP detection and effective rate limiting behind Nginx reverse proxies.**
+- **Registration automation scripts provide automated testing and production agent registration capabilities.**
+- **Security page integration enhances transparency and provides comprehensive cryptographic verification documentation.**
 
 **Section sources**
 - [agentid_build_plan.md:309-330](file://agentid_build_plan.md#L309-L330)
 - [DEPLOYMENT_GUIDE.md:1-476](file://docs/DEPLOYMENT_GUIDE.md#L1-L476)
-- [deploy.sh:1-409](file://deploy.sh#L1-L409)
+- [deploy.sh:1-414](file://deploy.sh#L1-L414)
+- [register-infrawatch-prod.js:1-149](file://register-infrawatch-prod.js#L1-L149)
+- [test-register.js:1-73](file://test-register.js#L1-L73)
+- [SecurityPage.html:1-942](file://SecurityPage.html#L1-L942)
