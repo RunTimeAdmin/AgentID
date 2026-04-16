@@ -3,8 +3,7 @@
  * Tests for snakeToCamel and escapeHtml functions
  */
 
-import { describe, it, expect } from 'vitest';
-import { snakeToCamel, escapeHtml, isValidSolanaAddress } from '../src/utils/transform.js';
+const { snakeToCamel, escapeHtml, isValidSolanaAddress } = require('../src/utils/transform.js');
 
 describe('Transform Utilities', () => {
   describe('snakeToCamel()', () => {

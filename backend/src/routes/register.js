@@ -66,12 +66,6 @@ router.post('/register', authLimiter, async (req, res, next) => {
       });
     }
 
-    const { pubkey } = req.body;
-
-    if (!isValidSolanaAddress(pubkey)) {
-      return res.status(400).json({ error: 'Invalid Solana public key format' });
-    }
-
     const {
       pubkey,
       name,
@@ -84,6 +78,10 @@ router.post('/register', authLimiter, async (req, res, next) => {
       creatorWallet,
       description
     } = req.body;
+
+    if (!isValidSolanaAddress(pubkey)) {
+      return res.status(400).json({ error: 'Invalid Solana public key format' });
+    }
 
     // 2. Verify the nonce is present in the message (prevents replay of arbitrary signatures)
     if (!message.includes(nonce)) {

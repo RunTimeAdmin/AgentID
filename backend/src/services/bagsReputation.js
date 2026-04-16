@@ -4,9 +4,9 @@
  */
 
 const axios = require('axios');
-const config = require('../config');
-const queries = require('../models/queries');
-const { getSAIDTrustScore } = require('./saidBinding');
+const config = require('../config/index.js');
+const queries = require('../models/queries.js');
+const { getSAIDTrustScore } = require('./saidBinding.js');
 
 /**
  * Compute BAGS reputation score for an agent

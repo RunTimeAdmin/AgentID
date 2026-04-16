@@ -1,54 +1,36 @@
 /**
  * BAGS Reputation Service Tests
  * Tests for computeBagsScore scoring logic
- * 
- * NOTE: These tests require a database connection or proper mocking setup.
- * The tests demonstrate the expected behavior but may need DB mocks to run without a database.
  */
 
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+jest.mock('../src/models/queries', () => ({
+  getAgent: jest.fn(),
+  getAgentActions: jest.fn(),
+  getUnresolvedFlagCount: jest.fn(),
+  updateBagsScore: jest.fn(),
+}));
 
-// Mock the database module before any imports that use it
-vi.mock('../src/models/db.js', async () => {
-  return {
-    pool: {
-      query: vi.fn(),
-      on: vi.fn()
-    },
-    query: vi.fn()
-  };
+jest.mock('../src/services/saidBinding', () => ({
+  getSAIDTrustScore: jest.fn(),
+}));
+
+jest.mock('../src/config', () => ({
+  saidGatewayUrl: 'http://mock-said',
+  bagsApiKey: 'test-key',
+}));
+
+jest.mock('axios');
+
+const { getAgent, getAgentActions, getUnresolvedFlagCount, updateBagsScore } = require('../src/models/queries');
+const { getSAIDTrustScore } = require('../src/services/saidBinding');
+const { computeBagsScore, refreshAndStoreScore } = require('../src/services/bagsReputation');
+const axios = require('axios');
+
+beforeEach(() => {
+  jest.clearAllMocks();
 });
 
-// Mock axios
-vi.mock('axios', () => ({
-  default: { get: vi.fn() }
-}));
-
-// Mock saidBinding
-vi.mock('../src/services/saidBinding.js', () => ({
-  getSAIDTrustScore: vi.fn()
-}));
-
-// Mock config
-vi.mock('../src/config/index.js', () => ({
-  default: {
-    databaseUrl: 'postgresql://test:test@localhost:5432/test',
-    nodeEnv: 'test',
-    saidGatewayUrl: 'https://test-gateway.example.com'
-  }
-}));
-
-// Import after mocks are established
-const { getAgent, getAgentActions, getUnresolvedFlagCount } = await import('../src/models/queries.js');
-const axios = (await import('axios')).default;
-const { getSAIDTrustScore } = await import('../src/services/saidBinding.js');
-const { computeBagsScore } = await import('../src/services/bagsReputation.js');
-
 describe('BAGS Reputation Service', () => {
-  beforeAll(() => {
-    vi.clearAllMocks();
-  });
-
   describe('Scoring logic', () => {
     it('should compute score with all 5 factors', async () => {
       const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
@@ -175,17 +157,17 @@ describe('BAGS Reputation Service', () => {
       
       getAgent.mockResolvedValue({
         pubkey,
-        token_mint: null,
-        registered_at: new Date() // Just registered
+        token_mint: 'token123',
+        registered_at: new Date(Date.now() - 10 * 86400000) // 10 days ago
       });
 
-      // No token mint = no fee activity
-      axios.get.mockRejectedValue(new Error('No token'));
-      // Low success rate
-      getAgentActions.mockResolvedValue({ total: 100, successful: 40, failed: 60 });
-      // Low SAID score
-      getSAIDTrustScore.mockResolvedValue({ score: 30, label: 'LOW' });
-      // One flag
+      // Low fee activity (1 SOL = 10 points)
+      axios.get.mockResolvedValue({ data: { totalFeesSOL: 1 } });
+      // Medium-low success rate (50% = 12 points)
+      getAgentActions.mockResolvedValue({ total: 100, successful: 50, failed: 50 });
+      // Low SAID score (20/100 = 3 points)
+      getSAIDTrustScore.mockResolvedValue({ score: 20, label: 'LOW' });
+      // One flag (5 points)
       getUnresolvedFlagCount.mockResolvedValue(1);
 
       const result = await computeBagsScore(pubkey);
@@ -284,6 +266,30 @@ describe('BAGS Reputation Service', () => {
       expect(result.breakdown.saidTrust.score).toBe(0);
       expect(result).toHaveProperty('score');
       expect(result).toHaveProperty('label');
+    });
+  });
+
+  describe('refreshAndStoreScore', () => {
+    it('should call computeBagsScore and updateBagsScore', async () => {
+      const pubkey = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU';
+      
+      getAgent.mockResolvedValue({
+        pubkey,
+        token_mint: null,
+        registered_at: new Date()
+      });
+
+      axios.get.mockRejectedValue(new Error('API error'));
+      getAgentActions.mockResolvedValue({ total: 0, successful: 0, failed: 0 });
+      getSAIDTrustScore.mockRejectedValue(new Error('API error'));
+      getUnresolvedFlagCount.mockResolvedValue(0);
+      updateBagsScore.mockResolvedValue({ pubkey, bags_score: 10 });
+
+      const result = await refreshAndStoreScore(pubkey);
+
+      expect(result).toHaveProperty('agent');
+      expect(result).toHaveProperty('scoreData');
+      expect(updateBagsScore).toHaveBeenCalledWith(pubkey, expect.any(Number));
     });
   });
 });

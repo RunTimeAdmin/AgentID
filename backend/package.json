@@ -7,8 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node src/models/migrate.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "keywords": [
     "agentid",
@@ -31,7 +31,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "vitest": "^4.1.4"
+    "jest": "^30.3.0",
+    "nodemon": "^3.0.2"
   }
 }
