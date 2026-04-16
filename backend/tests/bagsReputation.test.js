@@ -176,7 +176,7 @@ describe('BAGS Reputation Service', () => {
       expect(result.label).toBe('LOW');
     });
 
-    it('should return UNVERIFIED label for score < 40', async () => {
+    it('should return NEW AGENT label for score < 40', async () => {
       getAgent.mockResolvedValue({
         agent_id: TEST_AGENT_ID,
         pubkey: TEST_PUBKEY,
@@ -196,7 +196,7 @@ describe('BAGS Reputation Service', () => {
       const result = await computeBagsScore(TEST_AGENT_ID);
 
       expect(result.score).toBeLessThan(40);
-      expect(result.label).toBe('UNVERIFIED');
+      expect(result.label).toBe('NEW AGENT');
     });
   });
 

@@ -99,12 +99,14 @@ describe('PKI Challenge Service', () => {
       const signature = bs58.encode(signatureBytes);
 
       // Mock the database responses
+      // Note: challenge is stored as base58-encoded in the database
+      const challengeBase58 = bs58.encode(Buffer.from(challengeString));
       getVerification.mockResolvedValue({
         id: 1,
         agent_id: TEST_AGENT_ID,
         pubkey,
         nonce,
-        challenge: challengeString,
+        challenge: challengeBase58,
         expires_at: new Date(Date.now() + 300000),
         completed: false
       });
@@ -138,12 +140,14 @@ describe('PKI Challenge Service', () => {
       const signature = bs58.encode(signatureBytes);
 
       // Mock the verification record
+      // Note: challenge is stored as base58-encoded in the database
+      const challengeBase58 = bs58.encode(Buffer.from(challengeString));
       getVerification.mockResolvedValue({
         id: 1,
         agent_id: TEST_AGENT_ID,
         pubkey,
         nonce,
-        challenge: challengeString,
+        challenge: challengeBase58,
         expires_at: new Date(Date.now() + 300000),
         completed: false
       });

@@ -5,6 +5,7 @@ import AgentDetail from './pages/AgentDetail';
 import Register from './pages/Register';
 import Discover from './pages/Discover';
 import Demo from './pages/Demo';
+import Security from './pages/Security';
 
 function Navigation() {
   const location = useLocation();
@@ -30,6 +31,7 @@ function Navigation() {
             <NavLink to="/" active={isActive('/')}>Registry</NavLink>
             <NavLink to="/discover" active={isActive('/discover')}>Discover</NavLink>
             <NavLink to="/register" active={isActive('/register')}>Register</NavLink>
+            <NavLink to="/security" active={isActive('/security')}>Security</NavLink>
             <DemoNavLink to="/demo" active={isActive('/demo')}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -63,6 +65,7 @@ function Navigation() {
               <MobileNavLink to="/" active={isActive('/')} onClick={handleNavClick}>Registry</MobileNavLink>
               <MobileNavLink to="/discover" active={isActive('/discover')} onClick={handleNavClick}>Discover</MobileNavLink>
               <MobileNavLink to="/register" active={isActive('/register')} onClick={handleNavClick}>Register</MobileNavLink>
+              <MobileNavLink to="/security" active={isActive('/security')} onClick={handleNavClick}>Security</MobileNavLink>
               <MobileDemoNavLink to="/demo" active={isActive('/demo')} onClick={handleNavClick}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
@@ -173,6 +176,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/demo" element={<Demo />} />
+            <Route path="/security" element={<Security />} />
           </Routes>
         </main>
         <Footer />
