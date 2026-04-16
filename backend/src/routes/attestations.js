@@ -13,7 +13,7 @@ const {
   updateAgentStatus
 } = require('../models/queries');
 const { refreshAndStoreScore } = require('../services/bagsReputation');
-const { defaultLimiter } = require('../middleware/rateLimit');
+const { defaultLimiter, authLimiter } = require('../middleware/rateLimit');
 const { transformAgent, isValidSolanaAddress } = require('../utils/transform');
 const nacl = require('tweetnacl');
 const bs58 = require('bs58');
@@ -77,7 +77,7 @@ router.post('/agents/:pubkey/attest', defaultLimiter, async (req, res, next) => 
  * POST /agents/:pubkey/flag
  * Flag suspicious behavior with cryptographic proof-of-ownership
  */
-router.post('/agents/:pubkey/flag', defaultLimiter, async (req, res, next) => {
+router.post('/agents/:pubkey/flag', authLimiter, async (req, res, next) => {
   try {
     const { pubkey } = req.params;
     const { reporterPubkey, signature, timestamp, reason, evidence } = req.body;
