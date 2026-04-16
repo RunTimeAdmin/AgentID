@@ -15,7 +15,17 @@
 - [main.jsx](file://frontend/src/main.jsx)
 - [App.jsx](file://frontend/src/App.jsx)
 - [agentid_build_plan.md](file://agentid_build_plan.md)
+- [DEPLOYMENT_GUIDE.md](file://docs/DEPLOYMENT_GUIDE.md)
+- [deploy.sh](file://deploy.sh)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added critical Nginx reverse proxy configuration fix documentation with `app.set('trust proxy', 1)` in backend/server.js
+- Enhanced security middleware section to explain proper client IP detection behind reverse proxies
+- Updated troubleshooting guide to include proxy-related issues and solutions
+- Expanded deployment architecture documentation with trust proxy configuration details
+- Added security considerations for rate limiting and client IP accuracy
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -23,14 +33,18 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [Production Deployment Guide](#production-deployment-guide)
+7. [Automated Deployment Script](#automated-deployment-script)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Troubleshooting Guide](#troubleshooting-guide)
+11. [Conclusion](#conclusion)
+12. [Appendices](#appendices)
 
 ## Introduction
 This document provides comprehensive build and deployment guidance for the AgentID system. It covers the frontend build process (Vite compilation, asset optimization, bundle analysis, and static asset generation), backend deployment (Node.js application setup, process management with PM2, and server configuration), and the deployment architecture (Nginx server blocks, SSL certificate configuration with Certbot, and reverse proxy setup). It also includes CI/CD pipeline considerations, automated testing integration, deployment automation strategies, load balancing setup, monitoring configuration, rollback procedures, scaling considerations, performance optimization, and maintenance procedures for production deployments.
+
+**Updated** Enhanced with critical Nginx reverse proxy configuration fix documentation and improved security middleware implementation for proper client IP detection.
 
 ## Project Structure
 The AgentID project is organized into two primary areas:
@@ -67,13 +81,13 @@ B_srv --> B_rd
 ```
 
 **Diagram sources**
-- [server.js:1-76](file://backend/server.js#L1-L76)
-- [index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [server.js:1-107](file://backend/server.js#L1-L107)
+- [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
 - [redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
 - [rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
-- [frontend/package.json:1-33](file://frontend/package.json#L1-L33)
+- [frontend/package.json:1-35](file://frontend/package.json#L1-L35)
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 - [main.jsx:1-11](file://frontend/src/main.jsx#L1-L11)
 - [App.jsx:1-107](file://frontend/src/App.jsx#L1-L107)
@@ -91,24 +105,24 @@ B_srv --> B_rd
 - Frontend: React application built with Vite, Tailwind, and React Router, with an Axios-based API client that proxies to the backend via /api.
 
 **Section sources**
-- [server.js:1-76](file://backend/server.js#L1-L76)
-- [index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [server.js:1-107](file://backend/server.js#L1-L107)
+- [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
 - [redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
 - [rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
-- [frontend/package.json:1-33](file://frontend/package.json#L1-L33)
+- [frontend/package.json:1-35](file://frontend/package.json#L1-L35)
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 - [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
 
 ## Architecture Overview
-The deployment architecture centers around a Node.js/Express backend exposed via Nginx reverse proxy with SSL termination handled by Certbot. The frontend is served statically by Nginx after Vite build. PM2 manages the backend process with environment-specific configuration.
+The deployment architecture centers around a Node.js/Express backend exposed via Nginx reverse proxy with SSL termination handled by Certbot. The frontend is served statically by Nginx after Vite build. PM2 manages the backend process with environment-specific configuration. **Critical**: The backend now includes proper trust proxy configuration to ensure accurate client IP detection behind reverse proxies.
 
 ```mermaid
 graph TB
 Client["Browser / Widgets"]
-Nginx["Nginx Reverse Proxy<br/>SSL Termination (Certbot)"]
-API["AgentID API (Express)<br/>server.js"]
+Nginx["Nginx Reverse Proxy<br/>SSL Termination (Certbot)<br/>Proxy Headers"]
+API["AgentID API (Express)<br/>server.js<br/>Trust Proxy: 1"]
 DB["PostgreSQL"]
 Redis["Redis"]
 Client --> Nginx
@@ -119,7 +133,7 @@ Nginx --> Static["Static Assets (Vite Build Output)"]
 ```
 
 **Diagram sources**
-- [server.js:1-76](file://backend/server.js#L1-L76)
+- [server.js:44-45](file://backend/server.js#L44-L45)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
 - [redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
 - [agentid_build_plan.md:14-38](file://agentid_build_plan.md#L14-L38)
@@ -151,7 +165,7 @@ Output --> End(["Serve via Nginx"])
 
 **Section sources**
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
-- [frontend/package.json:1-33](file://frontend/package.json#L1-L33)
+- [frontend/package.json:1-35](file://frontend/package.json#L1-L35)
 
 ### Backend Deployment (Node.js + PM2)
 - Application startup: Express app exported for modular use and started when executed as main module.
@@ -159,6 +173,7 @@ Output --> End(["Serve via Nginx"])
 - Process management: PM2 recommended for process lifecycle, restart policies, and environment isolation.
 - Health checks: Built-in /health endpoint supports readiness/liveness probes.
 - Security middleware: Helmet, CORS, and rate limiting applied globally.
+- **Critical**: Trust proxy configuration ensures accurate client IP detection behind reverse proxies.
 
 ```mermaid
 sequenceDiagram
@@ -170,6 +185,7 @@ participant DB as "PostgreSQL Pool"
 participant Redis as "Redis Client"
 PM2->>Node : Start process
 Node->>Express : Load server.js
+Express->>Express : Set trust proxy (1)
 Express->>Config : Read env vars
 Express->>Express : Apply middleware (Helmet, CORS, Rate Limit)
 Express->>DB : Initialize pool
@@ -179,14 +195,14 @@ Express-->>PM2 : Ready (/health)
 ```
 
 **Diagram sources**
-- [server.js:1-76](file://backend/server.js#L1-L76)
-- [index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [server.js:44-45](file://backend/server.js#L44-L45)
+- [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
 - [redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
 
 **Section sources**
-- [server.js:1-76](file://backend/server.js#L1-L76)
-- [index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [server.js:1-107](file://backend/server.js#L1-L107)
+- [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
 
@@ -196,13 +212,14 @@ Express-->>PM2 : Ready (/health)
 - Reverse proxy: Forward /api requests to the backend service while serving static assets directly.
 - Static delivery: Serve frontend build artifacts from the Vite output directory.
 - Security headers: Enforce HTTPS, HSTS, and other security best practices via Nginx.
+- **Critical**: Proper trust proxy configuration ensures accurate client IP detection for rate limiting and security features.
 
 ```mermaid
 flowchart TD
 D_Start(["Incoming Request"]) --> SSL{"HTTPS?<br/>Certbot"}
 SSL --> |No| Redirect["301 Redirect to HTTPS"]
 SSL --> |Yes| Route{"Path?"}
-Route --> |/api*| ProxyAPI["Proxy to Backend (PM2)"]
+Route --> |/api*| ProxyAPI["Proxy to Backend (PM2)<br/>with Trust Proxy Headers"]
 Route --> |Static Assets| Static["Serve from Vite Output"]
 ProxyAPI --> D_End(["Response"])
 Static --> D_End
@@ -218,61 +235,404 @@ Redirect --> D_End
 - [vite.config.js:31-40](file://frontend/vite.config.js#L31-L40)
 - [api.js:3-8](file://frontend/src/lib/api.js#L3-L8)
 
-### CI/CD Pipeline Considerations
-- Automated testing: Integrate unit and integration tests into the pipeline to validate backend routes and frontend API interactions.
-- Build stages: Separate frontend build and backend build steps; publish artifacts for deployment.
-- Deployment automation: Use PM2 ecosystem files to manage environments and deploy hooks; orchestrate Nginx reloads post-deploy.
-- Rollback procedures: Maintain artifact versions and use blue/green or rolling updates with health checks; rollback to previous version on failure.
-- Monitoring: Instrument backend with metrics and logs; configure alerting for error rates, latency, and resource utilization.
+## Production Deployment Guide
 
-[No sources needed since this section provides general guidance]
+### VPS Environment Requirements
+The AgentID system is designed for deployment on Ubuntu 22.04 VPS with the following confirmed environment:
 
-### Load Balancing Setup
-- Horizontal scaling: Run multiple Node.js instances behind a load balancer (e.g., Nginx or cloud LB).
-- Sticky sessions: Not required for stateless API; ensure Redis is shared for challenge caches.
-- Health checks: Use /health endpoint for readiness probes; auto-remove unhealthy nodes.
-- Graceful shutdown: Implement SIGTERM handling to drain connections before restart.
+| Component | Status |
+|-----------|--------|
+| **OS** | Ubuntu 22.04.5 LTS |
+| **PostgreSQL** | v14, localhost:5432 (running) |
+| **Redis** | localhost:6379 (running) |
+| **Node.js** | v20.20.2 (installed) |
+| **PM2** | Running dissensus (3000) and infrawatch (3001) |
+| **Nginx** | SSL configured, 2 sites active |
+| **Port 3002** | FREE for AgentID backend |
+| **Disk** | 180GB free |
+| **RAM** | 14GB available |
+| **Domain** | agentid.provenanceai.network |
+| **GitHub** | https://github.com/RunTimeAdmin/AgentID |
 
-[No sources needed since this section provides general guidance]
+### Pre-Flight Checks
+Before starting deployment, verify all prerequisites:
 
-### Monitoring Configuration
-- Backend metrics: Expose metrics endpoints and integrate with monitoring stacks (Prometheus/Grafana).
-- Logs: Centralize application logs and correlate with request IDs for debugging.
-- Uptime: Monitor API availability and response times; alert on SLA breaches.
-- Frontend monitoring: Track Core Web Vitals and error tracking for the React app.
+```bash
+# Check PostgreSQL is running
+sudo systemctl status postgresql
 
-[No sources needed since this section provides general guidance]
+# Check Redis is running
+sudo systemctl status redis-server
 
-### Rollback Procedures
-- Version tagging: Tag releases with semantic versions and maintain rollback images.
-- Blue/green: Keep inactive environment ready; switch traffic on successful validation.
-- Database migrations: Use reversible migrations and maintain migration checkpoints.
-- Configuration drift: Manage environment variables via secure secret managers and version control.
+# Check Node.js version
+node --version  # Should be v20.20.2
 
-[No sources needed since this section provides general guidance]
+# Check PM2 is installed
+pm2 --version
 
-### Scaling Considerations
-- Stateless backend: Design API to be stateless; rely on Redis for transient state.
-- Database scaling: Use read replicas and connection pooling; optimize queries and indexes.
-- CDN: Offload static assets to CDN for global distribution.
-- Auto-scaling: Scale backend instances based on CPU/memory or request rate; adjust Redis cluster as needed.
+# Check Nginx is running
+sudo systemctl status nginx
 
-[No sources needed since this section provides general guidance]
+# Confirm port 3002 is free
+sudo netstat -tlnp | grep 3002 || echo "Port 3002 is free"
 
-### Performance Optimization
-- Frontend: Enable code splitting, lazy loading, and image optimization; monitor bundle size.
-- Backend: Tune connection pool sizes, implement efficient caching with Redis TTLs, and minimize database round-trips.
-- Network: Use compression, HTTP/2, and keep-alive connections; reduce latency with geographically closer infrastructure.
+# Verify DNS resolution
+dig +short agentid.provenanceai.network
+# Should return your VPS IP address
+```
 
-[No sources needed since this section provides general guidance]
+### Database Setup
+Create the database and user for AgentID:
 
-### Maintenance Procedures
-- Patch Node.js and dependencies regularly; validate against test suites.
-- Rotate secrets and update environment variables via secure channels.
-- Review and prune unused Redis keys; monitor memory usage.
-- Audit database indexes and query plans; archive old verification records.
+```bash
+# Create database user (replace CHANGE_THIS_STRONG_PASSWORD with a secure password)
+sudo -u postgres psql -c "CREATE USER agentid WITH PASSWORD 'CHANGE_THIS_STRONG_PASSWORD';"
 
-[No sources needed since this section provides general guidance]
+# Create database
+sudo -u postgres psql -c "CREATE DATABASE agentid OWNER agentid;"
+
+# Grant privileges
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE agentid TO agentid;"
+
+# Verify database was created
+sudo -u postgres psql -l | grep agentid
+```
+
+**Security Note:** Replace `CHANGE_THIS_STRONG_PASSWORD` with a strong, unique password. Store it securely as you'll need it for the environment configuration.
+
+### Repository Setup and Dependencies
+Clone the repository and install dependencies:
+
+```bash
+# Navigate to web root
+cd /var/www
+
+# Clone the repository
+git clone https://github.com/RunTimeAdmin/AgentID.git agentid
+
+# Install backend dependencies
+cd agentid/backend
+npm install --production
+
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
+
+### Environment Configuration
+#### Backend Environment
+Create the backend `.env` file:
+
+```bash
+cat > /var/www/agentid/backend/.env << 'EOF'
+PORT=3002
+NODE_ENV=production
+DATABASE_URL=postgresql://agentid:CHANGE_THIS_STRONG_PASSWORD@localhost:5432/agentid
+REDIS_URL=redis://localhost:6379
+BAGS_API_KEY=bags_prod_mvg-MqxhjYTqlqB0CX8Xps-YC_CyYj9W6R3BrbM6B6U
+SAID_GATEWAY_URL=https://said-identity-gateway.up.railway.app
+CORS_ORIGIN=https://agentid.provenanceai.network
+AGENTID_BASE_URL=https://agentid.provenanceai.network
+BADGE_CACHE_TTL=60
+CHALLENGE_EXPIRY_SECONDS=300
+VERIFIED_THRESHOLD=70
+EOF
+```
+
+**Important:** Replace `CHANGE_THIS_STRONG_PASSWORD` with the same password you used in Step 2.
+
+#### Frontend Environment
+Create the frontend `.env` file:
+
+```bash
+cat > /var/www/agentid/frontend/.env << 'EOF'
+VITE_AGENTID_API_URL=https://agentid.provenanceai.network
+EOF
+```
+
+### Database Migration
+Initialize the database schema:
+
+```bash
+cd /var/www/agentid/backend
+
+node -e "require('dotenv').config(); const { migrate } = require('./src/models/migrate'); migrate().then(() => { console.log('Migration complete'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); });"
+```
+
+Expected output: `Migration complete`
+
+### Frontend Build
+Build the frontend for production:
+
+```bash
+cd /var/www/agentid/frontend
+npm run build
+```
+
+The production build will be created in `/var/www/agentid/frontend/dist/`.
+
+### Nginx Configuration
+Create the Nginx site configuration:
+
+```bash
+sudo tee /etc/nginx/sites-available/agentid << 'EOF'
+server {
+    listen 80;
+    server_name agentid.provenanceai.network;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name agentid.provenanceai.network;
+
+    # SSL will be configured by certbot
+    # ssl_certificate /etc/letsencrypt/live/agentid.provenanceai.network/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/agentid.provenanceai.network/privkey.pem;
+
+    # Frontend (static files)
+    root /var/www/agentid/frontend/dist;
+    index index.html;
+
+    # API proxy to backend
+    location /register {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /verify {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /agents {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /badge {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /widget {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /reputation {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /health {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /discover {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # SPA fallback — all other routes serve the React app
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Gzip compression
+    gzip on;
+    gzip_types text/plain application/json application/javascript text/css image/svg+xml;
+    gzip_min_length 1000;
+}
+EOF
+```
+
+Enable the site:
+
+```bash
+# Create symlink to enable site
+sudo ln -s /etc/nginx/sites-available/agentid /etc/nginx/sites-enabled/
+
+# Test Nginx configuration
+sudo nginx -t
+
+# Reload Nginx
+sudo systemctl reload nginx
+```
+
+### SSL Certificate
+Obtain and configure SSL certificate using Certbot:
+
+```bash
+sudo certbot --nginx -d agentid.provenanceai.network
+```
+
+Follow the interactive prompts. Certbot will automatically:
+- Obtain the certificate
+- Update the Nginx configuration with SSL settings
+- Set up auto-renewal
+
+### Backend Startup with PM2
+Start the backend with PM2:
+
+```bash
+cd /var/www/agentid/backend
+
+# Start the application
+pm2 start server.js --name agentid --env production
+
+# Save PM2 configuration
+pm2 save
+
+# Optional: Set up PM2 startup script (if not already done)
+pm2 startup systemd
+```
+
+### Deployment Verification
+Run these checks to confirm everything is working:
+
+```bash
+# Health check
+curl https://agentid.provenanceai.network/health
+
+# Check agents endpoint
+curl https://agentid.provenanceai.network/agents
+
+# Check PM2 status
+pm2 list
+
+# Check recent logs
+pm2 logs agentid --lines 20
+
+# Test the main site
+curl -I https://agentid.provenanceai.network
+```
+
+Expected responses:
+- `/health` should return `{"status":"ok"}`
+- `/agents` should return a JSON array (empty `[]` initially)
+- PM2 list should show `agentid` as `online`
+
+### Post-Deployment Tasks
+After successful deployment:
+
+1. **Register InfraWatch as the first agent** - Use the registration flow to add your first verified agent
+2. **Test the Demo page** - Visit https://agentid.provenanceai.network/demo
+3. **Test badge endpoint** - Try `/badge/{agentId}` with a registered agent
+4. **Test widget** - Try `/widget/{agentId}` to verify widget rendering
+5. **Set up monitoring** - Consider adding AgentID to your existing monitoring infrastructure
+
+### Future Updates
+When updating to a new version:
+
+```bash
+cd /var/www/agentid
+
+# Pull latest changes
+git pull origin main
+
+# Update backend dependencies
+cd backend && npm install --production
+
+# Update and rebuild frontend
+cd ../frontend && npm install && npm run build
+
+# Restart the application
+pm2 restart agentid
+
+# Verify it's running
+pm2 logs agentid --lines 10
+```
+
+## Automated Deployment Script
+
+### Script Overview
+The `deploy.sh` script automates deployment steps 2-10 from the production deployment guide, providing a one-shot deployment solution for Ubuntu 22.04 VPS environments.
+
+### Prerequisites
+Before running the script, edit the configuration section with your secure password and domain:
+
+```bash
+# Configuration - EDIT THESE VALUES
+DB_PASSWORD="CHANGE_THIS_STRONG_PASSWORD"  # <-- CHANGE THIS!
+DOMAIN="agentid.provenanceai.network"
+REPO_URL="https://github.com/RunTimeAdmin/AgentID.git"
+INSTALL_DIR="/var/www/agentid"
+BACKEND_PORT=3002
+```
+
+### Script Features
+- **Pre-flight checks**: Validates root privileges, required commands, port availability, and directory conflicts
+- **Database automation**: Creates PostgreSQL user, database, and grants privileges
+- **Dependency installation**: Installs backend and frontend dependencies
+- **Environment configuration**: Generates secure `.env` files with proper permissions
+- **Migration execution**: Runs database migrations automatically
+- **Frontend building**: Builds production frontend assets
+- **Nginx configuration**: Sets up SSL-enabled server blocks with proxy configuration
+- **SSL certificate**: Attempts automatic Certbot configuration with manual fallback
+- **PM2 management**: Starts backend with proper environment configuration
+- **Verification**: Tests health endpoints and displays useful commands
+
+### Usage
+```bash
+# Make script executable
+chmod +x deploy.sh
+
+# Run with root privileges
+sudo ./deploy.sh
+```
+
+### Error Handling
+The script includes comprehensive error handling:
+- Checks for required commands (psql, git, node, npm, pm2, nginx, certbot)
+- Validates database password is changed from default
+- Ensures port 3002 is available
+- Handles existing directory conflicts with user confirmation
+- Provides detailed error messages for troubleshooting
+
+### Security Features
+- **Restricted permissions**: `.env` files are secured with `chmod 600`
+- **Password validation**: Requires changing default database password
+- **Root requirement**: Ensures script runs with appropriate privileges
+- **Safe directory handling**: Confirms directory removal if needed
 
 ## Dependency Analysis
 The backend depends on configuration, database, and Redis modules. The frontend depends on Vite configuration and the Axios API client that proxies to the backend.
@@ -289,8 +649,8 @@ B_srv --> B_err["backend/src/middleware/errorHandler.js"]
 
 **Diagram sources**
 - [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
-- [server.js:1-76](file://backend/server.js#L1-L76)
-- [index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [server.js:1-107](file://backend/server.js#L1-L107)
+- [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
 - [redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
 - [rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
@@ -298,7 +658,7 @@ B_srv --> B_err["backend/src/middleware/errorHandler.js"]
 
 **Section sources**
 - [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
-- [server.js:1-76](file://backend/server.js#L1-L76)
+- [server.js:1-107](file://backend/server.js#L1-L107)
 
 ## Performance Considerations
 - Database: Use connection pooling and SSL in production; monitor slow queries and tune indexes.
@@ -306,18 +666,102 @@ B_srv --> B_err["backend/src/middleware/errorHandler.js"]
 - Frontend: Analyze bundle size and remove unused dependencies; leverage lazy loading for routes.
 - Network: Enable gzip/deflate and HTTP/2; consider CDN for static assets.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
-- Health checks: Use the /health endpoint to verify service readiness.
-- Error logging: Inspect centralized logs for stack traces and error details.
-- Rate limiting: Investigate 429 responses and adjust limits for authenticated endpoints.
-- CORS: Verify allowed origins and credentials configuration.
-- Database connectivity: Confirm connection string and SSL settings; check pool error logs.
-- Redis connectivity: Validate connection retry strategy and offline queue behavior.
+
+### Application Issues
+```bash
+# View application logs
+pm2 logs agentid
+
+# View application logs with more lines
+pm2 logs agentid --lines 100
+
+# Monitor real-time
+pm2 monit
+
+# Restart application
+pm2 restart agentid
+
+# Stop application
+pm2 stop agentid
+```
+
+### Nginx Issues
+```bash
+# Check Nginx error log
+sudo tail -f /var/log/nginx/error.log
+
+# Test Nginx configuration
+sudo nginx -t
+
+# Reload Nginx
+sudo systemctl reload nginx
+```
+
+### Database Issues
+```bash
+# Check database connection
+sudo -u postgres psql -d agentid -c "SELECT version();"
+
+# Check table counts
+sudo -u postgres psql -d agentid -c "SELECT count(*) FROM agent_identities;"
+
+# List all tables
+sudo -u postgres psql -d agentid -c "\dt"
+```
+
+### Backend Direct Test
+```bash
+# Test backend directly (bypass Nginx)
+curl http://localhost:3002/health
+
+# Test specific endpoints
+curl http://localhost:3002/agents
+curl http://localhost:3002/discover
+```
+
+### Proxy and Rate Limiting Issues
+**Critical**: If you encounter rate limiting problems or incorrect client IP detection behind Nginx:
+
+```bash
+# Check if trust proxy is properly configured
+curl -s http://localhost:3002/health | grep -i "trust"
+
+# Verify client IP detection in logs
+pm2 logs agentid --lines 50 | grep -i "ip\|client"
+
+# Test rate limiting with curl
+curl -H "X-Real-IP: 192.168.1.100" http://localhost:3002/agents
+curl -H "X-Forwarded-For: 192.168.1.100" http://localhost:3002/agents
+
+# Check Nginx proxy headers
+sudo nginx -T | grep -A 5 -B 5 "proxy_set_header"
+```
+
+### Common Problems
+| Issue | Solution |
+|-------|----------|
+| `ECONNREFUSED` on port 3002 | Check if backend is running: `pm2 list` |
+| Database connection errors | Verify `.env` DATABASE_URL and PostgreSQL status |
+| 502 Bad Gateway | Check backend is running and Nginx config is correct |
+| SSL errors | Run `sudo certbot --nginx -d agentid.provenanceai.network` |
+| Permission denied on `/var/www/agentid` | Check ownership: `sudo chown -R $USER:$USER /var/www/agentid` |
+| **Rate limiting issues** | **Verify trust proxy configuration in server.js** |
+| **Incorrect client IPs** | **Check Nginx proxy headers and trust proxy setting** |
+
+### Security Checklist
+- [ ] Changed default database password
+- [ ] `.env` file has restricted permissions (`chmod 600`)
+- [ ] SSL certificate is active and auto-renewing
+- [ ] Firewall rules restrict unnecessary ports
+- [ ] Regular backups configured for PostgreSQL
+- [ ] PM2 process monitoring is active
+- [ ] Nginx security headers are in place
+- [ ] **Trust proxy configuration is properly set in server.js**
+- [ ] **Rate limiting respects client IP behind reverse proxy**
 
 **Section sources**
-- [server.js:34-41](file://backend/server.js#L34-L41)
+- [server.js:44-45](file://backend/server.js#L44-L45)
 - [errorHandler.js:15-41](file://backend/src/middleware/errorHandler.js#L15-L41)
 - [rateLimit.js:23-42](file://backend/src/middleware/rateLimit.js#L23-L42)
 - [index.js:21-26](file://backend/src/config/index.js#L21-L26)
@@ -325,12 +769,14 @@ B_srv --> B_err["backend/src/middleware/errorHandler.js"]
 - [redis.js:9-20](file://backend/src/models/redis.js#L9-L20)
 
 ## Conclusion
-The AgentID system combines a React/Vite frontend with a Node.js/Express backend, supported by PostgreSQL and Redis. For production, deploy behind Nginx with SSL managed by Certbot, run the backend with PM2, and implement CI/CD with automated testing and deployment automation. Use monitoring, load balancing, and careful maintenance to ensure reliability and scalability.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The AgentID system combines a React/Vite frontend with a Node.js/Express backend, supported by PostgreSQL and Redis. For production, deploy behind Nginx with SSL managed by Certbot, run the backend with PM2, and implement CI/CD with automated testing and deployment automation. **Critical**: The backend now includes proper trust proxy configuration to ensure accurate client IP detection behind reverse proxies, which is essential for effective rate limiting and security features. The comprehensive deployment guide and automated script provide streamlined deployment processes for Ubuntu 22.04 VPS environments, ensuring reliable and repeatable production deployments with robust error handling, security practices, and proper reverse proxy support.
 
 ## Appendices
 - Environment variables and deployment notes are documented in the build plan, including database URLs, Redis configuration, CORS origins, and cache TTLs.
+- The automated deployment script provides a complete solution for production deployments with pre-flight checks, error handling, and verification steps.
+- **Trust proxy configuration is now a critical security feature that ensures proper client IP detection and effective rate limiting behind Nginx reverse proxies.**
 
 **Section sources**
 - [agentid_build_plan.md:309-330](file://agentid_build_plan.md#L309-L330)
+- [DEPLOYMENT_GUIDE.md:1-476](file://docs/DEPLOYMENT_GUIDE.md#L1-L476)
+- [deploy.sh:1-409](file://deploy.sh#L1-L409)

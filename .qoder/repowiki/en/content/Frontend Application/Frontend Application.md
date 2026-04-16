@@ -10,6 +10,7 @@
 - [Register.jsx](file://frontend/src/pages/Register.jsx)
 - [Discover.jsx](file://frontend/src/pages/Discover.jsx)
 - [Demo.jsx](file://frontend/src/pages/Demo.jsx)
+- [Security.jsx](file://frontend/src/pages/Security.jsx)
 - [TrustBadge.jsx](file://frontend/src/components/TrustBadge.jsx)
 - [ReputationBreakdown.jsx](file://frontend/src/components/ReputationBreakdown.jsx)
 - [CapabilityList.jsx](file://frontend/src/components/CapabilityList.jsx)
@@ -17,15 +18,16 @@
 - [index.css](file://frontend/src/index.css)
 - [package.json](file://frontend/package.json)
 - [vite.config.js](file://frontend/vite.config.js)
+- [index.html](file://frontend/index.html)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced TrustBadge component with verified tier styling, shimmer animations, and gold-themed visual indicators
-- Updated AgentDetail page to display tier information alongside status badges
-- Added Demo route and navigation elements for interactive demonstration
-- **Updated Footer navigation links** from placeholder href='#' to functional URLs pointing to official documentation, API reference, and GitHub repository
-- Updated component props and styling patterns to support tier-based visual hierarchy
+- Integrated new Security page with comprehensive security and trust information
+- Enhanced frontend routing system with Security page integration in both desktop and mobile navigation menus
+- Updated navigation to include Security route with proper active state highlighting
+- Added Security page component with detailed security model explanation, attack protections, and best practices
+- Enhanced footer navigation links with Security page integration
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -40,45 +42,47 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the AgentID frontend React application, focusing on the user interface and component architecture. It explains the routing configuration, state management approach, and styling strategy using TailwindCSS. It documents the key pages (Registry, AgentDetail, Register, Discover, Demo), reusable components (TrustBadge, ReputationBreakdown, CapabilityList, FlagModal), and integration patterns with the backend API. It also covers user workflows, form handling, error states, and responsive design considerations.
+This document describes the AgentID frontend React application, focusing on the user interface and component architecture. It explains the routing configuration, state management approach, and styling strategy using TailwindCSS. It documents the key pages (Registry, AgentDetail, Register, Discover, Demo, Security), reusable components (TrustBadge, ReputationBreakdown, CapabilityList, FlagModal), and integration patterns with the backend API. It also covers user workflows, form handling, error states, and responsive design considerations. **The application now features a comprehensive Security page that provides detailed information about AgentID's cryptographic security model, attack protections, and best practices for agent operators.**
 
 ## Project Structure
 The frontend is a Vite-powered React application with:
-- Pages under src/pages for route handlers
+- Pages under src/pages for route handlers including the new Security page
 - Reusable components under src/components
 - Shared API client under src/lib/api.js
 - Global styles under src/index.css
-- Routing and navigation in src/App.jsx
+- Routing and navigation in src/App.jsx with Security page integration
 - Application entry in src/main.jsx
-- Build and development configuration in vite.config.js and package.json
+- Build and development configuration in vite.config.js
 
 ```mermaid
 graph TB
 subgraph "Entry"
 MAIN["main.jsx"]
 APP["App.jsx"]
-end
+INDEX["index.html"]
+END
 subgraph "Routing"
 ROUTES["React Router Routes"]
 NAV["Navigation"]
-DEMO["Demo Route"]
-end
+SECURITY["Security Route"]
+END
 subgraph "Pages"
 REG["Registry.jsx"]
 DETAIL["AgentDetail.jsx"]
 REGISTER["Register.jsx"]
 DISCOVER["Discover.jsx"]
-DEMO_PAGE["Demo.jsx"]
-end
+DEMO["Demo.jsx"]
+SECURITY_PAGE["Security.jsx"]
+END
 subgraph "Components"
 BADGE["TrustBadge.jsx"]
 REP["ReputationBreakdown.jsx"]
 CAPS["CapabilityList.jsx"]
 FLAG["FlagModal.jsx"]
-end
+END
 subgraph "API"
 API["api.js"]
-end
+END
 MAIN --> APP
 APP --> ROUTES
 ROUTES --> REG
@@ -86,7 +90,8 @@ ROUTES --> DETAIL
 ROUTES --> REGISTER
 ROUTES --> DISCOVER
 ROUTES --> DEMO
-DEMO --> DEMO_PAGE
+ROUTES --> SECURITY
+SECURITY --> SECURITY_PAGE
 DETAIL --> BADGE
 DETAIL --> REP
 DETAIL --> CAPS
@@ -95,12 +100,15 @@ REG --> BADGE
 DISCOVER --> BADGE
 DISCOVER --> CAPS
 REGISTER --> BADGE
-DEMO_PAGE --> BADGE
+DEMO --> BADGE
+SECURITY_PAGE --> BADGE
 REG --> API
 DETAIL --> API
 REGISTER --> API
 DISCOVER --> API
-DEMO_PAGE --> API
+DEMO --> API
+SECURITY_PAGE --> API
+NAV --> SECURITY
 ```
 
 **Diagram sources**
@@ -111,33 +119,37 @@ DEMO_PAGE --> API
 - [Register.jsx:1-673](file://frontend/src/pages/Register.jsx#L1-L673)
 - [Discover.jsx:1-421](file://frontend/src/pages/Discover.jsx#L1-L421)
 - [Demo.jsx:1-780](file://frontend/src/pages/Demo.jsx#L1-L780)
+- [Security.jsx:1-779](file://frontend/src/pages/Security.jsx#L1-L779)
 - [TrustBadge.jsx:1-196](file://frontend/src/components/TrustBadge.jsx#L1-L196)
 - [ReputationBreakdown.jsx:1-165](file://frontend/src/components/ReputationBreakdown.jsx#L1-L165)
 - [CapabilityList.jsx:1-111](file://frontend/src/components/CapabilityList.jsx#L1-L111)
 - [FlagModal.jsx:1-258](file://frontend/src/components/FlagModal.jsx#L1-L258)
 - [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
+- [index.html:1-14](file://frontend/index.html#L1-L14)
 
 **Section sources**
 - [main.jsx:1-11](file://frontend/src/main.jsx#L1-L11)
 - [App.jsx:87-193](file://frontend/src/App.jsx#L87-L193)
-- [package.json:1-33](file://frontend/package.json#L1-L33)
+- [package.json:1-35](file://frontend/package.json#L1-L35)
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
+- [index.html:1-14](file://frontend/index.html#L1-L14)
 
 ## Core Components
-- Navigation and Footer: Provide global site layout and links with enhanced Demo route integration. **Updated** Footer now contains functional links to official documentation, API reference, and GitHub repository.
+- Navigation and Footer: Provide global site layout and links with enhanced Security page integration. **Updated** Navigation now includes Security route in both desktop and mobile menus with proper active state highlighting.
 - Pages:
   - Registry: Browse agents with filters, pagination, and loading/error states.
-  - AgentDetail: View agent profile, reputation, capabilities, flags/attestations, and flag submission with cryptographic authentication. Now displays tier information for verified agents.
+  - AgentDetail: View agent profile, reputation, capabilities, flags/attestations, and flag submission with cryptographic authentication.
   - Register: Multi-step agent onboarding with challenge-response and metadata collection.
   - Discover: Capability-based agent discovery with suggestions and ranking.
   - Demo: Interactive demonstration of the complete verification workflow with step-by-step guidance.
+  - **New** Security: Comprehensive security and trust page explaining AgentID's cryptographic security model, attack protections, resolved findings, and best practices for agent operators.
 - Reusable Components:
   - TrustBadge: Enhanced with verified tier styling, shimmer animations, and gold-themed visual indicators for premium verified agents.
   - ReputationBreakdown: Five-factor reputation scoring visualization.
   - CapabilityList: Capability tags with categorization and icons.
   - FlagModal: Enhanced controlled modal for reporting agents with Ed25519 signature requirements and cryptographic authentication.
 
-**Updated** Enhanced TrustBadge component now supports verified tier styling with shimmer animations and gold-themed visual indicators for premium verified agents. AgentDetail page now displays tier information alongside status badges for comprehensive agent verification context. **Footer navigation links have been updated to functional URLs for improved user experience.**
+**Updated** Added comprehensive Security page that provides detailed information about AgentID's cryptographic security model, attack protections, resolved findings, and best practices. Navigation now includes Security route with proper active state highlighting in both desktop and mobile views.
 
 **Section sources**
 - [App.jsx:7-193](file://frontend/src/App.jsx#L7-L193)
@@ -146,13 +158,14 @@ DEMO_PAGE --> API
 - [Register.jsx:241-673](file://frontend/src/pages/Register.jsx#L241-L673)
 - [Discover.jsx:94-421](file://frontend/src/pages/Discover.jsx#L94-L421)
 - [Demo.jsx:121-780](file://frontend/src/pages/Demo.jsx#L121-L780)
+- [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
 - [TrustBadge.jsx:42-196](file://frontend/src/components/TrustBadge.jsx#L42-L196)
 - [ReputationBreakdown.jsx:46-165](file://frontend/src/components/ReputationBreakdown.jsx#L46-L165)
 - [CapabilityList.jsx:69-111](file://frontend/src/components/CapabilityList.jsx#L69-L111)
 - [FlagModal.jsx:4-258](file://frontend/src/components/FlagModal.jsx#L4-L258)
 
 ## Architecture Overview
-The app uses React Router for client-side routing and a shared Axios-based API client for backend integration. Pages orchestrate state and render reusable components. Styling relies on TailwindCSS with a custom dark theme and glass morphism effects. The enhanced TrustBadge component now supports tier-based visual hierarchy with premium verified agents receiving gold-themed styling and shimmer animations.
+The app uses React Router for client-side routing and a shared Axios-based API client for backend integration. Pages orchestrate state and render reusable components. Styling relies on TailwindCSS with a custom dark theme and glass morphism effects. **The new Security page provides comprehensive security transparency, explaining cryptographic implementations, attack protections, and best practices for agent operators.**
 
 ```mermaid
 sequenceDiagram
@@ -161,20 +174,17 @@ participant R as "React Router"
 participant P as "Page Component"
 participant C as "Reusable Components"
 participant A as "API Client"
-U->>R : Navigate to "/agents/ : pubkey" or "/demo"
-R->>P : Render AgentDetail or Demo
-P->>A : Fetch agent, badge, reputation, attestations, flags
-A-->>P : Data or Error
-P->>C : Render TrustBadge with tier styling, ReputationBreakdown, CapabilityList, FlagModal
-U->>C : View enhanced TrustBadge with shimmer animation
-C-->>P : Display tier information and status
+U->>R : Navigate to "/security"
+R->>P : Render Security page
+P->>P : Display security model, attack protections, resolved findings
+P->>C : Render TrustBadge for security examples
+U->>C : View enhanced TrustBadge with security context
+C-->>P : Display security-related information
 ```
 
 **Diagram sources**
-- [AgentDetail.jsx:167-504](file://frontend/src/pages/AgentDetail.jsx#L167-L504)
-- [Demo.jsx:121-780](file://frontend/src/pages/Demo.jsx#L121-L780)
+- [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
 - [TrustBadge.jsx:42-196](file://frontend/src/components/TrustBadge.jsx#L42-L196)
-- [FlagModal.jsx:4-258](file://frontend/src/components/FlagModal.jsx#L4-L258)
 - [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
 
 **Section sources**
@@ -189,11 +199,12 @@ C-->>P : Display tier information and status
   - "/agents/:pubkey" → AgentDetail
   - "/register" → Register
   - "/discover" → Discover
-  - "/demo" → Demo (new)
-- Navigation highlights active route and includes responsive mobile menu with Demo route integration.
-- Footer provides informational links with **updated functional URLs** for improved user accessibility.
+  - "/demo" → Demo
+  - **"/security" → Security (new)**: Comprehensive security and trust page
+- Navigation highlights active route and includes responsive mobile menu with Security route integration.
+- **Updated** Security page is now accessible from both desktop and mobile navigation menus with proper active state highlighting.
 
-**Updated** Added Demo route with dedicated navigation elements and styling for interactive demonstration. **Footer navigation links now point to official external resources instead of placeholder links.**
+**Updated** Added Security route with dedicated navigation elements and styling for comprehensive security transparency. Security page provides detailed information about cryptographic security model, attack protections, and best practices.
 
 **Section sources**
 - [App.jsx:1-193](file://frontend/src/App.jsx#L1-L193)
@@ -242,11 +253,11 @@ ShowSkeletons --> End
   - Parallel fetch of agent, badge, reputation, attestations, flags.
   - Renders hero with TrustBadge (enhanced with tier styling), reputation breakdown, details, action statistics, capabilities, description, and activity history.
   - Displays tier information alongside status badges for verified agents.
-  - Flag submission opens FlagModal with cryptographic authentication, validates reason/evidence/signature/reporterPubkey, submits via API, refreshes flags.
+  - Flag submission opens FlagModal with cryptographic authentication, validates reason/evidence/signature, submits via API, refreshes flags.
   - Handles 404 and generic errors with dedicated UI.
 - Backend integration: getAgent, getBadge, getReputation, getAttestations, getFlags, flagAgent.
 
-**Updated** Enhanced TrustBadge rendering to display tier information for verified agents with gold-themed styling and shimmer animations. **Footer navigation provides direct links to official documentation and resources.**
+**Updated** Enhanced TrustBadge rendering to display tier information for verified agents with gold-themed styling and shimmer animations.
 
 ```mermaid
 sequenceDiagram
@@ -354,8 +365,6 @@ HasResults --> |Yes| RenderResults["Render ranked cards with capabilities and en
   - Step 4: Display trust badge with embed options.
 - Backend integration: registerAgent, issueChallenge, verifyChallenge, getBadge.
 
-**New** Interactive demonstration page showcasing the complete AgentID verification workflow with step-by-step guidance and real-time feedback.
-
 ```mermaid
 flowchart TD
 Start(["Demo Start"]) --> Step1["Generate Keypair (browser)"]
@@ -373,6 +382,37 @@ Step5 --> End(["Complete"])
 **Section sources**
 - [Demo.jsx:121-780](file://frontend/src/pages/Demo.jsx#L121-L780)
 - [api.js:64-83](file://frontend/src/lib/api.js#L64-L83)
+
+### Security Page
+**New** Comprehensive security and trust page explaining AgentID's cryptographic security model:
+
+- **Core Guarantee**: Three fundamental security guarantees - private keys never stored, nothing secret leaves server, and proof-based trust using Ed25519 signatures.
+- **Verification Process**: Four-step cryptographic verification workflow with detailed explanations of challenge issuance, agent signing, verification, and nonce consumption.
+- **Attack Protections**: Detailed coverage of replay attack prevention, time-based verification, rate limiting, and XSS prevention.
+- **Data Transparency**: Complete data handling policy showing what is stored, what is temporary, and what is never collected.
+- **Resolved Findings**: Documentation of security issues identified during audit and their resolutions.
+- **Known Limitations**: Transparent disclosure of ongoing improvements and future roadmap items.
+- **Best Practices**: Practical guidance for agent operators on secure key management and operational security.
+
+**Updated** Security page provides comprehensive security transparency and educational content for users and operators.
+
+```mermaid
+flowchart TD
+Start(["Security Page Load"]) --> Core["Display Core Guarantee"]
+Core --> Verify["Show Verification Process"]
+Verify --> Attacks["Explain Attack Protections"]
+Attacks --> Data["Display Data Transparency"]
+Data --> Resolved["Show Resolved Findings"]
+Resolved --> Limitations["Present Known Limitations"]
+Limitations --> Best["Provide Best Practices"]
+Best --> End(["Complete"])
+```
+
+**Diagram sources**
+- [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
+
+**Section sources**
+- [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
 
 ### Reusable Components
 
@@ -453,7 +493,7 @@ Step5 --> End(["Complete"])
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 
 ## Dependency Analysis
-- Runtime dependencies: React, ReactDOM, React Router, Axios, Prop Types.
+- Runtime dependencies: React, ReactDOM, React Router, Axios, Prop Types, tweetnacl, bs58.
 - Dev dependencies: Vite, TailwindCSS, React plugin, ESLint, TypeScript types.
 - Build pipeline:
   - Vite serves index.html and widget.html.
@@ -467,11 +507,15 @@ Vite["vite.config.js"]
 React["react, react-dom"]
 Router["react-router-dom"]
 Axios["axios"]
+Tweetnacl["tweetnacl"]
+Bs58["bs58"]
 Tailwind["tailwindcss"]
 Types["@types/react, @types/react-dom"]
 Pkg --> React
 Pkg --> Router
 Pkg --> Axios
+Pkg --> Tweetnacl
+Pkg --> Bs58
 Pkg --> Tailwind
 Pkg --> Types
 Vite --> Tailwind
@@ -479,11 +523,11 @@ Vite --> React
 ```
 
 **Diagram sources**
-- [package.json:12-31](file://frontend/package.json#L12-L31)
+- [package.json:12-35](file://frontend/package.json#L12-L35)
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 
 **Section sources**
-- [package.json:12-31](file://frontend/package.json#L12-L31)
+- [package.json:12-35](file://frontend/package.json#L12-L35)
 - [vite.config.js:1-42](file://frontend/vite.config.js#L1-L42)
 
 ## Performance Considerations
@@ -494,6 +538,7 @@ Vite --> React
 - Lazy loading images (if added) and virtualizing long lists would further optimize.
 - **Enhanced** FlagModal performance: Real-time message generation and validation occur efficiently without blocking UI.
 - **Enhanced** TrustBadge performance: Tier styling calculations are optimized with conditional rendering to minimize re-renders.
+- **New** Security page performance: Comprehensive content is optimized with lazy loading and efficient rendering of security information.
 
 ## Troubleshooting Guide
 - Authentication:
@@ -505,6 +550,10 @@ Vite --> React
   - **Enhanced** FlagModal validation: Requires reason, reporterPubkey, signature, and optional JSON evidence; signature must be base58-encoded Ed25519 signature.
 - Error boundaries:
   - Pages render explicit error banners and empty states for graceful degradation.
+- **New** Security Page Issues:
+  - Ensure all SVG icons are properly rendered and styled.
+  - Verify responsive design works correctly across all screen sizes.
+  - Check that security data displays properly without performance issues.
 - **New** Cryptographic Authentication Issues:
   - Ensure reporterPubkey follows Solana wallet address format.
   - Verify signature is generated using Ed25519 private key and base58 encoding.
@@ -514,11 +563,6 @@ Vite --> React
   - Ensure tweetnacl and bs58 libraries are properly loaded for keypair generation.
   - Verify browser supports WebCrypto API for cryptographic operations.
   - Check that API endpoints are accessible for registration and verification steps.
-- **New** Footer Link Issues:
-  - All footer links now point to official external resources and open in new tabs with proper security attributes.
-  - Documentation link: https://github.com/RunTimeAdmin/AgentID/wiki
-  - API reference link: https://github.com/RunTimeAdmin/AgentID/blob/main/docs/API_REFERENCE.md
-  - GitHub repository link: https://github.com/RunTimeAdmin/AgentID
 
 **Section sources**
 - [api.js:23-33](file://frontend/src/lib/api.js#L23-L33)
@@ -526,10 +570,10 @@ Vite --> React
 - [FlagModal.jsx:12-73](file://frontend/src/components/FlagModal.jsx#L12-L73)
 - [AgentDetail.jsx:214-227](file://frontend/src/pages/AgentDetail.jsx#L214-L227)
 - [Demo.jsx:147-203](file://frontend/src/pages/Demo.jsx#L147-L203)
-- [App.jsx:161-165](file://frontend/src/App.jsx#L161-L165)
+- [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
 
 ## Conclusion
-The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management. **The TrustBadge enhancement introduces tier-based visual hierarchy with premium verified agents receiving gold-themed styling and shimmer animations, significantly improving visual distinction and trust communication. The addition of the Demo route provides comprehensive interactive guidance for users experiencing the complete verification workflow.** **The footer navigation has been enhanced with functional links to official documentation, API reference, and GitHub repository, improving user access to external resources.**
+The AgentID frontend is a modular, theme-consistent React application with clear separation of concerns. Pages manage UI state and orchestrate API calls, while reusable components encapsulate presentation logic. The routing and API client provide a solid foundation for user workflows spanning discovery, onboarding, and profile management. **The addition of the comprehensive Security page significantly enhances the application's transparency and trustworthiness by providing detailed information about AgentID's cryptographic security model, attack protections, and best practices. The enhanced navigation system now includes Security route integration in both desktop and mobile views, making security information easily accessible to all users.**
 
 ## Appendices
 
@@ -539,13 +583,15 @@ The AgentID frontend is a modular, theme-consistent React application with clear
 - Register: Use FormField, TextAreaField, CapabilitiesInput; manage multi-step state transitions.
 - Discover: Render suggested capabilities and clickable chips; pass results to result cards with enhanced TrustBadge visuals.
 - Demo: Interactive demonstration of complete verification workflow with step-by-step guidance.
+- **New** Security: Comprehensive security transparency page with detailed explanations of cryptographic security model and best practices.
 
 ### Customization Options
 - Theming: Adjust CSS variables in index.css to change palettes and glows; shimmer animation can be customized.
 - Components: Extend TrustBadge props to include tier or additional metrics; customize CapabilityList styles.
 - API: Add interceptors for logging or retry policies; expand api.js with new endpoints.
 - **Enhanced** FlagModal: Customize message format, adjust signature requirements, or modify authentication parameters.
-- **New** Demo Page: Customize step descriptions, add additional verification steps, or modify embed options.
+- **New** Security Page: Customize security information, add new attack protection categories, or modify best practices content.
+- **New** Navigation: Add or modify Security page integration in desktop and mobile menus.
 
 ### Enhanced TrustBadge Features
 **New** The TrustBadge component now supports comprehensive tier-based styling:
@@ -575,26 +621,28 @@ The AgentID frontend is a modular, theme-consistent React application with clear
 - [FlagModal.jsx:144](file://frontend/src/components/FlagModal.jsx#L144)
 - [FlagModal.jsx:166](file://frontend/src/components/FlagModal.jsx#L166)
 
-### Demo Page Interactive Features
-**New** The Demo page provides comprehensive interactive guidance:
+### Security Page Comprehensive Information
+**New** The Security page provides extensive security transparency:
 
-1. **Step-by-Step Workflow**: Four-phase demonstration of the verification process
-2. **Browser-Based Cryptography**: In-browser keypair generation using tweetnacl
-3. **Real-time Feedback**: Progress indicators and success/failure states
-4. **Embed Options**: SVG badge generation and iframe embedding capabilities
-5. **API Call Transparency**: Detailed API call examples for each step
-
-**Section sources**
-- [Demo.jsx:121-780](file://frontend/src/pages/Demo.jsx#L121-L780)
-
-### Footer Navigation Enhancement
-**New** The footer navigation has been enhanced with functional external links:
-
-1. **Documentation Link**: Points to https://github.com/RunTimeAdmin/AgentID/wiki for comprehensive project documentation
-2. **API Reference Link**: Points to https://github.com/RunTimeAdmin/AgentID/blob/main/docs/API_REFERENCE.md for technical API specifications
-3. **GitHub Repository Link**: Points to https://github.com/RunTimeAdmin/AgentID for source code and project repository
-4. **Security Attributes**: All links open in new tabs with `target="_blank"` and `rel="noopener noreferrer"` for security
-5. **Consistent Styling**: Maintains the same hover effects and color scheme as other navigation elements
+1. **Core Guarantee**: Three fundamental security promises - private keys never stored, nothing secret leaves server, and proof-based trust
+2. **Verification Process**: Four-step cryptographic workflow with detailed explanations
+3. **Attack Protections**: Replay prevention, time-based verification, rate limiting, and XSS prevention
+4. **Data Transparency**: Complete data handling policy with storage classifications
+5. **Resolved Findings**: Documentation of audit findings and their resolutions
+6. **Known Limitations**: Transparent disclosure of ongoing improvements
+7. **Best Practices**: Practical guidance for secure agent operation
 
 **Section sources**
-- [App.jsx:161-165](file://frontend/src/App.jsx#L161-L165)
+- [Security.jsx:121-779](file://frontend/src/pages/Security.jsx#L121-L779)
+
+### Navigation Enhancement Details
+**New** The navigation system now includes comprehensive Security page integration:
+
+1. **Desktop Navigation**: Security link prominently displayed in main navigation bar with active state highlighting
+2. **Mobile Navigation**: Security option available in responsive mobile menu with proper styling
+3. **Active State Management**: Security route properly highlights when active
+4. **Consistent Styling**: Security navigation maintains the same design language as other navigation elements
+5. **Accessibility**: Proper ARIA labels and keyboard navigation support
+
+**Section sources**
+- [App.jsx:30-78](file://frontend/src/App.jsx#L30-L78)

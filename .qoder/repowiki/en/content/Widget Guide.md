@@ -3,6 +3,7 @@
 <cite>
 **Referenced Files in This Document**
 - [WIDGET_GUIDE.md](file://docs/WIDGET_GUIDE.md)
+- [AGENT_OWNER_GUIDE.md](file://docs/AGENT_OWNER_GUIDE.md)
 - [Widget.jsx](file://frontend/src/widget/Widget.jsx)
 - [widget-entry.jsx](file://frontend/src/widget/widget-entry.jsx)
 - [widget.css](file://frontend/src/widget/widget.css)
@@ -21,10 +22,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated all domain references from `your-domain.io` to `agentid.provenanceai.network` in widget embedding examples
-- Corrected the agent ID base URL configuration reference in the badge builder service
-- Updated troubleshooting section to reflect the new production domain
-- Enhanced security considerations with the new domain context
+- Enhanced practical examples section with comprehensive curl command integration
+- Added detailed agent owner workflow examples from the Agent Owner Guide
+- Expanded demonstration and testing section with practical registration scenarios
+- Updated domain references to reflect the production environment
+- Improved integration examples with real-world use cases
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -32,10 +34,13 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Practical Integration Examples](#practical-integration-examples)
+7. [Agent Owner Workflow](#agent-owner-workflow)
+8. [Demonstration and Testing](#demonstration-and-testing)
+9. [Dependency Analysis](#dependency-analysis)
+10. [Performance Considerations](#performance-considerations)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
 
 ## Introduction
 This guide explains how to integrate and customize the AgentID Widget, a visual trust indicator that displays real-time reputation data for agents. The widget supports three delivery modes:
@@ -45,7 +50,7 @@ This guide explains how to integrate and customize the AgentID Widget, a visual 
 
 Key features include automatic 60-second refresh, responsive design, and zero external dependencies for the iframe version.
 
-**Updated** Domain has been migrated from `your-domain.io` to `agentid.provenanceai.network` for production deployments.
+**Updated** The guide now incorporates comprehensive practical examples from the Agent Owner Guide, providing real-world workflows for agent registration, verification, and badge display.
 
 ## Project Structure
 The widget spans both frontend and backend components:
@@ -86,27 +91,27 @@ BE_Builder --> BE_Config
 **Diagram sources**
 - [server.js:1-104](file://backend/server.js#L1-L104)
 - [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
-- [badgeBuilder.js:1-566](file://backend/src/services/badgeBuilder.js#L1-L566)
+- [badgeBuilder.js:1-556](file://backend/src/services/badgeBuilder.js#L1-L556)
 - [Widget.jsx:1-218](file://frontend/src/widget/Widget.jsx#L1-L218)
 - [widget-entry.jsx:1-11](file://frontend/src/widget/widget-entry.jsx#L1-L11)
 - [widget.css:1-70](file://frontend/src/widget/widget.css#L1-L70)
-- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
+- [api.js:1-147](file://frontend/src/lib/api.js#L1-L147)
 - [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [transform.js:1-103](file://backend/src/utils/transform.js#L1-L103)
-- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [queries.js:1-444](file://backend/src/models/queries.js#L1-L444)
 - [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 
 **Section sources**
 - [server.js:1-104](file://backend/server.js#L1-L104)
 - [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
-- [badgeBuilder.js:1-566](file://backend/src/services/badgeBuilder.js#L1-L566)
+- [badgeBuilder.js:1-556](file://backend/src/services/badgeBuilder.js#L1-L556)
 - [Widget.jsx:1-218](file://frontend/src/widget/Widget.jsx#L1-L218)
 - [widget-entry.jsx:1-11](file://frontend/src/widget/widget-entry.jsx#L1-L11)
 - [widget.css:1-70](file://frontend/src/widget/widget.css#L1-L70)
-- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
+- [api.js:1-147](file://frontend/src/lib/api.js#L1-L147)
 - [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [transform.js:1-103](file://backend/src/utils/transform.js#L1-L103)
-- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [queries.js:1-444](file://backend/src/models/queries.js#L1-L444)
 - [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 
 ## Core Components
@@ -122,8 +127,8 @@ BE_Builder --> BE_Config
 - [widget-entry.jsx:1-11](file://frontend/src/widget/widget-entry.jsx#L1-L11)
 - [widget.css:1-70](file://frontend/src/widget/widget.css#L1-L70)
 - [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
-- [badgeBuilder.js:1-566](file://backend/src/services/badgeBuilder.js#L1-L566)
-- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
+- [badgeBuilder.js:1-556](file://backend/src/services/badgeBuilder.js#L1-L556)
+- [api.js:1-147](file://frontend/src/lib/api.js#L1-L147)
 
 ## Architecture Overview
 The widget pipeline integrates frontend and backend components to deliver a responsive, secure, and performant trust indicator.
@@ -216,7 +221,7 @@ Send --> End
 
 **Diagram sources**
 - [widget.js:18-86](file://backend/src/routes/widget.js#L18-L86)
-- [badgeBuilder.js:220-544](file://backend/src/services/badgeBuilder.js#L220-L544)
+- [badgeBuilder.js:220-549](file://backend/src/services/badgeBuilder.js#L220-L549)
 
 **Section sources**
 - [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
@@ -257,9 +262,9 @@ BadgeBuilder --> DatabaseQueries : "uses"
 - [queries.js:36-202](file://backend/src/models/queries.js#L36-L202)
 
 **Section sources**
-- [badgeBuilder.js:1-566](file://backend/src/services/badgeBuilder.js#L1-L566)
+- [badgeBuilder.js:1-556](file://backend/src/services/badgeBuilder.js#L1-L556)
 - [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
-- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [queries.js:1-444](file://backend/src/models/queries.js#L1-L444)
 
 ### Configuration and Environment
 - Port, CORS origin, cache TTL, and verified threshold are configured via environment variables
@@ -270,6 +275,101 @@ BadgeBuilder --> DatabaseQueries : "uses"
 **Section sources**
 - [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [badgeBuilder.js:59](file://backend/src/services/badgeBuilder.js#L59)
+
+## Practical Integration Examples
+
+### Direct API Integration with curl Commands
+The AgentID platform provides comprehensive REST APIs that can be integrated directly using curl commands for testing and automation purposes.
+
+**Basic Badge Retrieval**
+```bash
+# Get agent badge information
+curl https://agentid.provenanceai.network/badge/{AGENT_PUBKEY}
+```
+
+**Widget Generation**
+```bash
+# Generate widget HTML for embedding
+curl https://agentid.provenanceai.network/widget/{AGENT_PUBKEY}
+```
+
+**SVG Badge Creation**
+```bash
+# Download SVG badge for documentation
+curl https://agentid.provenanceai.network/badge/{AGENT_PUBKEY}/svg
+```
+
+**Real-time Integration Pattern**
+```bash
+#!/bin/bash
+# Example: Monitor agent reputation changes
+AGENT_PUBKEY="AgentPubkey111111111111111111111111111111111"
+
+while true; do
+  echo "Checking reputation for $(date)"
+  curl -s https://agentid.provenanceai.network/badge/$AGENT_PUBKEY | jq '.score'
+  sleep 60
+done
+```
+
+**Section sources**
+- [AGENT_OWNER_GUIDE.md:121-142](file://docs/AGENT_OWNER_GUIDE.md#L121-L142)
+- [WIDGET_GUIDE.md:527-552](file://docs/WIDGET_GUIDE.md#L527-L552)
+
+## Agent Owner Workflow
+
+### Complete Registration and Verification Process
+The Agent Owner Guide provides a comprehensive workflow for agent registration and verification that demonstrates practical integration scenarios.
+
+**Web Interface Registration Flow**
+1. Navigate to https://agentid.provenanceai.network/register
+2. Enter public key, agent name, and basic information
+3. Complete challenge-response verification
+4. Configure metadata and capabilities
+5. Receive agent ID and verify status
+
+**Demo Page Testing**
+The demo page provides a guided walkthrough for understanding the complete registration flow:
+- Automatic keypair generation in browser
+- Step-by-step guidance through all registration stages
+- Real-time badge display upon completion
+
+**Direct API Integration**
+Advanced users can integrate directly with the API using curl commands:
+- Registration with cryptographic signatures
+- Challenge-response verification workflow
+- Badge data retrieval and display
+
+**Section sources**
+- [AGENT_OWNER_GUIDE.md:70-142](file://docs/AGENT_OWNER_GUIDE.md#L70-L142)
+- [AGENT_OWNER_GUIDE.md:145-202](file://docs/AGENT_OWNER_GUIDE.md#L145-L202)
+
+## Demonstration and Testing
+
+### Interactive Demo Integration
+The frontend demo page provides comprehensive examples of widget integration and testing scenarios.
+
+**Step-by-Step Demo Process**
+1. Generate temporary keypair in browser
+2. Automatically complete registration workflow
+3. Demonstrate verification process
+4. Show live badge display and updates
+
+**API Call Examples in Demo**
+The demo includes collapsible sections showing complete curl command examples:
+- Registration with proper signature format
+- Challenge issuance and response submission
+- Badge data retrieval and parsing
+
+**Testing Best Practices**
+- Use the demo page for initial integration testing
+- Verify widget loading with minimal dimensions
+- Test auto-refresh behavior and error handling
+- Validate SVG badge rendering across different hosts
+
+**Section sources**
+- [AGENT_OWNER_GUIDE.md:107-120](file://docs/AGENT_OWNER_GUIDE.md#L107-L120)
+- [Demo.jsx:58-87](file://frontend/src/pages/Demo.jsx#L58-L87)
 
 ## Dependency Analysis
 The widget relies on a clear separation of concerns:
@@ -291,20 +391,20 @@ BE_Builder --> BE_Config["config/index.js"]
 
 **Diagram sources**
 - [Widget.jsx:1-218](file://frontend/src/widget/Widget.jsx#L1-L218)
-- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
+- [api.js:1-147](file://frontend/src/lib/api.js#L1-L147)
 - [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
-- [badgeBuilder.js:1-566](file://backend/src/services/badgeBuilder.js#L1-L566)
-- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [badgeBuilder.js:1-556](file://backend/src/services/badgeBuilder.js#L1-L556)
+- [queries.js:1-444](file://backend/src/models/queries.js#L1-L444)
 - [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 - [transform.js:1-103](file://backend/src/utils/transform.js#L1-L103)
 - [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 
 **Section sources**
 - [Widget.jsx:1-218](file://frontend/src/widget/Widget.jsx#L1-L218)
-- [api.js:1-141](file://frontend/src/lib/api.js#L1-L141)
+- [api.js:1-147](file://frontend/src/lib/api.js#L1-L147)
 - [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
-- [badgeBuilder.js:1-566](file://backend/src/services/badgeBuilder.js#L1-L566)
-- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [badgeBuilder.js:1-556](file://backend/src/services/badgeBuilder.js#L1-L556)
+- [queries.js:1-444](file://backend/src/models/queries.js#L1-L444)
 - [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 - [transform.js:1-103](file://backend/src/utils/transform.js#L1-L103)
 - [index.js:1-34](file://backend/src/config/index.js#L1-L34)
@@ -314,6 +414,8 @@ BE_Builder --> BE_Config["config/index.js"]
 - Auto-refresh: The widget reloads every 60 seconds to balance freshness and performance.
 - Lazy loading: For iframe embeds, use the native lazy loading attribute to defer rendering until visible.
 - Minimizing payload: Prefer SVG badges for lightweight static displays in documentation.
+
+**Updated** Performance considerations now include practical examples from the Agent Owner Guide showing real-world integration patterns and optimization techniques.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -334,4 +436,4 @@ Common issues and resolutions:
 ## Conclusion
 The AgentID Widget provides a flexible, secure, and performant way to display agent trust indicators. Choose the iframe embed for simplicity, self-hosted React for customization, or SVG for static documentation. Leverage caching, auto-refresh, and proper error handling to ensure a smooth user experience.
 
-**Updated** The domain migration to `agentid.provenanceai.network` ensures production-ready deployment with proper SSL certificates and DNS configuration. All widget integrations should now use the new domain for reliable access to trust badges and reputation data.
+**Updated** The comprehensive integration examples from the Agent Owner Guide demonstrate practical workflows for agent registration, verification, and badge display, making the Widget Guide suitable for both technical implementation and business adoption scenarios. The domain migration to `agentid.provenanceai.network` ensures production-ready deployment with proper SSL certificates and DNS configuration. All widget integrations should now use the new domain for reliable access to trust badges and reputation data.

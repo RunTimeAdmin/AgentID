@@ -13,7 +13,16 @@
 - [server.js](file://backend/server.js)
 - [ReputationBreakdown.jsx](file://frontend/src/components/ReputationBreakdown.jsx)
 - [api.js](file://frontend/src/lib/api.js)
+- [TrustBadge.jsx](file://frontend/src/components/TrustBadge.jsx)
+- [badgeBuilder.js](file://backend/src/services/badgeBuilder.js)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated label threshold documentation to reflect the change from "UNVERIFIED" to "NEW AGENT" for scores below 40
+- Updated frontend label mapping to maintain consistency with backend changes
+- Added new section documenting the positive user approach rationale for the label change
+- Updated troubleshooting guide to include the new "NEW AGENT" label
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -28,7 +37,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the AgentID reputation services with a focus on the BAGS ecosystem scoring and trust evaluation algorithms. It explains how the 0–100 scale reputation score is computed from five weighted factors, how performance metrics integrate into the scoring, and how the reputation breakdown is generated. It also covers configuration options, caching strategies, integration patterns with external reputation APIs, and operational guidance for real-time updates and troubleshooting.
+This document describes the AgentID reputation services with a focus on the BAGS ecosystem scoring and trust evaluation algorithms. It explains how the 0–100 scale reputation score is computed from five weighted factors, how performance metrics integrate into the scoring, and how the reputation breakdown is generated. The system now uses a more positive approach by labeling agents with scores below 40 as "NEW AGENT" instead of "UNVERIFIED" to encourage new users. It also covers configuration options, caching strategies, integration patterns with external reputation APIs, and operational guidance for real-time updates and troubleshooting.
 
 ## Project Structure
 The reputation service spans backend and frontend components:
@@ -41,6 +50,7 @@ The reputation service spans backend and frontend components:
 graph TB
 subgraph "Frontend"
 RB["ReputationBreakdown.jsx"]
+TB["TrustBadge.jsx"]
 API["api.js"]
 end
 subgraph "Backend"
@@ -52,8 +62,10 @@ QRY["models/queries.js"]
 DB["models/db.js"]
 REDIS["models/redis.js"]
 CFG["config/index.js"]
+BB["services/badgeBuilder.js"]
 end
 RB --> API
+TB --> API
 API --> SRV
 SRV --> RRT
 RRT --> SBR
@@ -64,6 +76,7 @@ SBR --> REDIS
 CFG --> SRV
 CFG --> SBR
 CFG --> SBD
+BB --> CFG
 ```
 
 **Diagram sources**
@@ -74,13 +87,15 @@ CFG --> SBD
 - [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
 - [redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
-- [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
+- [config/index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [ReputationBreakdown.jsx:1-165](file://frontend/src/components/ReputationBreakdown.jsx#L1-L165)
+- [TrustBadge.jsx:1-280](file://frontend/src/components/TrustBadge.jsx#L1-L280)
 - [api.js:1-140](file://frontend/src/lib/api.js#L1-L140)
+- [badgeBuilder.js:40-82](file://backend/src/services/badgeBuilder.js#L40-L82)
 
 **Section sources**
 - [server.js:1-91](file://backend/server.js#L1-L91)
-- [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
+- [config/index.js:1-34](file://backend/src/config/index.js#L1-L34)
 
 ## Core Components
 - Reputation computation service: computes a 0–100 score from five factors and returns a structured breakdown.
@@ -88,12 +103,14 @@ CFG --> SBD
 - Data access layer: provides agent data, action statistics, and flag counts.
 - External integrations: BAGS analytics API for fee activity and SAID Identity Gateway for trust scores.
 - Frontend renderer: displays the reputation breakdown with color-coded progress bars and labels.
+- Badge builder: integrates reputation data into trust badges with tier classification.
 
 Key responsibilities:
 - Factor aggregation and normalization.
 - Graceful degradation when external APIs are unavailable.
-- Consistent labeling of scores into HIGH/MEDIUM/LOW/UNVERIFIED tiers.
+- Consistent labeling of scores into HIGH/MEDIUM/LOW/NEW AGENT tiers.
 - Integration with discovery and listing endpoints that sort by bags_score.
+- Positive user experience through encouraging "NEW AGENT" labeling.
 
 **Section sources**
 - [bagsReputation.js:16-122](file://backend/src/services/bagsReputation.js#L16-L122)
@@ -101,9 +118,10 @@ Key responsibilities:
 - [queries.js:146-202](file://backend/src/models/queries.js#L146-L202)
 - [queries.js:294-305](file://backend/src/models/queries.js#L294-L305)
 - [saidBinding.js:61-87](file://backend/src/services/saidBinding.js#L61-L87)
+- [badgeBuilder.js:40-82](file://backend/src/services/badgeBuilder.js#L40-L82)
 
 ## Architecture Overview
-The reputation pipeline integrates internal and external data sources to produce a normalized score.
+The reputation pipeline integrates internal and external data sources to produce a normalized score with a positive user approach.
 
 ```mermaid
 sequenceDiagram
@@ -158,7 +176,9 @@ Computes a 0–100 score from five factors:
 Scoring logic:
 - Each factor is computed independently and clamped to its maximum.
 - Total score is the sum of all factors.
-- Label is assigned based on thresholds: HIGH (≥80), MEDIUM (≥60), LOW (≥40), UNVERIFIED (<40).
+- Label is assigned based on thresholds: HIGH (≥80), MEDIUM (≥60), LOW (≥40), **NEW AGENT (<40)**.
+
+**Updated** The label assignment now uses "NEW AGENT" instead of "UNVERIFIED" for scores below 40, reflecting a more positive approach to encourage new users in the BAGS ecosystem.
 
 External API handling:
 - Calls to BAGS analytics and SAID gateway are wrapped with timeouts and fallbacks to zero or default values when unavailable.
@@ -182,7 +202,7 @@ SAID --> SAIDScore["Normalize SAID score to ≤15"]
 SAIDScore --> Flags["Count unresolved flags"]
 Flags --> Community["Assign community score (10, 5, or 0)"]
 Community --> Sum["Sum scores"]
-Sum --> Label["Assign label by thresholds"]
+Sum --> Label["Assign label by thresholds:<br/>HIGH (≥80)<br/>MEDIUM (≥60)<br/>LOW (≥40)<br/>NEW AGENT (<40)"]
 Label --> Return["Return {score, label, breakdown, saidScore}"]
 ```
 
@@ -232,9 +252,19 @@ Database schema highlights:
 - Displays the reputation breakdown with color-coded bars and labels.
 - Computes total score and label based on the breakdown.
 - Uses gradient bars and glow effects to visualize contribution of each factor.
+- **Updated** Now displays "NEW AGENT" label consistently with backend changes.
 
 **Section sources**
 - [ReputationBreakdown.jsx:46-144](file://frontend/src/components/ReputationBreakdown.jsx#L46-L144)
+
+### Trust Badge Integration
+- Integrates reputation data into trust badges with tier classification.
+- Uses "NEW AGENT" label for low-scoring agents to encourage participation.
+- Maintains consistent labeling across all UI components.
+
+**Section sources**
+- [TrustBadge.jsx:97-122](file://frontend/src/components/TrustBadge.jsx#L97-L122)
+- [badgeBuilder.js:40-82](file://backend/src/services/badgeBuilder.js#L40-L82)
 
 ### API Client Integration
 - Provides a convenience wrapper around the backend API.
@@ -307,6 +337,7 @@ Common issues and resolutions:
 - External API failures: The service falls back to zero points for affected factors; monitor logs for warnings.
 - Redis connectivity: Non-critical; service continues without cache.
 - Real-time updates: The refreshAndStoreScore function updates bags_score in the database; ensure this is invoked when conditions change.
+- **Updated** Label inconsistencies: Ensure both backend and frontend components use "NEW AGENT" for scores below 40.
 
 Operational checks:
 - Health endpoints: Use /health to verify service availability.
@@ -320,7 +351,7 @@ Operational checks:
 - [server.js:84-86](file://backend/server.js#L84-L86)
 
 ## Conclusion
-The AgentID reputation service provides a robust, extensible framework for computing and exposing BAGS ecosystem trust scores. Its modular design separates concerns across routing, computation, data access, and external integrations, while gracefully handling external API failures. With optional caching and existing database indexes, the system can be tuned for performance and reliability. The frontend components offer a clear, visual representation of the reputation breakdown, aiding trust evaluation across the AgentID ecosystem.
+The AgentID reputation service provides a robust, extensible framework for computing and exposing BAGS ecosystem trust scores. Its modular design separates concerns across routing, computation, data access, and external integrations, while gracefully handling external API failures. The recent enhancement of labeling agents with scores below 40 as "NEW AGENT" instead of "UNVERIFIED" reflects a more positive approach to encourage new users in the ecosystem. With optional caching and existing database indexes, the system can be tuned for performance and reliability. The frontend components offer a clear, visual representation of the reputation breakdown, aiding trust evaluation across the AgentID ecosystem.
 
 ## Appendices
 
@@ -340,7 +371,9 @@ Total score is the sum of the five factors, capped at 100.
 - HIGH: score ≥ 80
 - MEDIUM: score ≥ 60
 - LOW: score ≥ 40
-- UNVERIFIED: score < 40
+- **NEW AGENT: score < 40**
+
+**Updated** The label threshold now uses "NEW AGENT" for scores below 40, providing a more encouraging experience for new users in the BAGS ecosystem.
 
 **Section sources**
 - [bagsReputation.js:95-105](file://backend/src/services/bagsReputation.js#L95-L105)
@@ -350,9 +383,10 @@ Total score is the sum of the five factors, capped at 100.
 - External API URLs and keys: SAID gateway URL and BAGS API key.
 - Database and Redis connections: connection strings and retry strategies.
 - Cache TTL and challenge expiry: configurable for badges and verification.
+- **New** Verified threshold: configurable threshold for determining verified vs standard tier.
 
 Environment variables:
-- DATABASE_URL, BAGS_API_KEY, SAID_GATEWAY_URL, AGENTID_BASE_URL, REDIS_URL, CORS_ORIGIN, BADGE_CACHE_TTL, CHALLENGE_EXPIRY_SECONDS.
+- DATABASE_URL, BAGS_API_KEY, SAID_GATEWAY_URL, AGENTID_BASE_URL, REDIS_URL, CORS_ORIGIN, BADGE_CACHE_TTL, CHALLENGE_EXPIRY_SECONDS, VERIFIED_THRESHOLD.
 
 **Section sources**
 - [config/index.js:6-28](file://backend/src/config/index.js#L6-L28)
@@ -376,6 +410,7 @@ Indexes:
 - Frontend: Use getReputation(pubkey) to fetch and render the breakdown.
 - Backend: Call computeBagsScore(pubkey) to compute and refresh scores.
 - External APIs: Integrate BAGS analytics and SAID gateway with timeouts and fallbacks.
+- **New** Positive User Experience: The "NEW AGENT" label encourages continued participation and learning in the BAGS ecosystem.
 
 **Section sources**
 - [api.js:58-62](file://frontend/src/lib/api.js#L58-L62)

@@ -117,20 +117,20 @@ export default function FlagModal({ isOpen, onClose, onSubmit, agentPubkey }) {
             {/* Reporter Pubkey Input */}
             <div>
               <label htmlFor="flag-reporter" className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                Your Wallet Address <span className="text-red-400">*</span>
+                Your Public Key <span className="text-red-400">*</span>
               </label>
               <input
                 id="flag-reporter"
                 type="text"
                 value={reporterPubkey}
                 onChange={(e) => setReporterPubkey(e.target.value)}
-                placeholder="Paste your Solana wallet address (pubkey)..."
+                placeholder="Paste your Ed25519 public key (base58-encoded)..."
                 className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-cyan)] focus:ring-1 focus:ring-[var(--accent-cyan)] transition-colors font-mono text-sm"
                 disabled={isSubmitting}
                 required
               />
               <p className="mt-1.5 text-xs text-[var(--text-muted)]">
-                Required: Your Solana wallet public key. You must prove ownership by signing a message.
+                Required: Your Ed25519 public key. You must prove ownership by signing a message with the corresponding private key.
               </p>
             </div>
 

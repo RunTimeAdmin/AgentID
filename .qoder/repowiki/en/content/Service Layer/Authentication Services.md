@@ -15,13 +15,16 @@
 - [package.json](file://backend/package.json)
 - [AgentID_Code_Review.md](file://AgentID_Code_Review.md)
 - [agentid_build_plan.md](file://agentid_build_plan.md)
+- [pkiChallenge.test.js](file://backend/tests/pkiChallenge.test.js)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated service module import patterns to use explicit .js extensions for improved module resolution
-- Enhanced documentation to reflect consistent file extension usage across all service imports
-- Updated dependency analysis to show explicit .js extensions in internal module imports
+- Updated challenge string format to include agent UUID: `AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}`
+- Modified verification response to return agentId alongside verification result
+- Updated PKI challenge endpoints to accept agentId instead of pubkey in request bodies
+- Enhanced service APIs to use agent UUID for challenge issuance and verification
+- Updated authentication workflows to reflect UUID-based agent identification
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -47,7 +50,7 @@ The authentication system is composed of two primary services:
 - BagsAuthVerifier: wraps the Bags Ed25519 agent auth flow to verify wallet ownership
 - PKIChallenge: issues and validates Ed25519-signed challenges to prevent spoofing and replay attacks
 
-**Updated** Service modules now consistently use explicit .js extensions in import statements to improve module resolution and maintainability.
+**Updated** The system now uses UUID-based agent identification throughout the authentication flow, with challenge strings containing agent UUID for enhanced security and traceability.
 
 ## Project Structure
 The authentication-related code resides in the backend service under the src directory. Key areas include:
@@ -87,27 +90,27 @@ MIGRATE --> MODELS_DB
 
 **Diagram sources**
 - [server.js:1-85](file://backend/server.js#L1-L85)
-- [index.js:1-31](file://backend/src/config/index.js#L1-L31)
+- [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
-- [verify.js:1-112](file://backend/src/routes/verify.js#L1-L112)
+- [verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
 - [bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
-- [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
-- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [pkiChallenge.js:1-106](file://backend/src/services/pkiChallenge.js#L1-L106)
+- [queries.js:1-443](file://backend/src/models/queries.js#L1-L443)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
-- [migrate.js:1-100](file://backend/src/models/migrate.js#L1-L100)
+- [migrate.js:1-101](file://backend/src/models/migrate.js#L1-L101)
 
 **Section sources**
 - [server.js:1-85](file://backend/server.js#L1-L85)
-- [index.js:1-31](file://backend/src/config/index.js#L1-L31)
+- [index.js:1-34](file://backend/src/config/index.js#L1-L34)
 - [rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
-- [verify.js:1-112](file://backend/src/routes/verify.js#L1-L112)
+- [verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
 - [bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
-- [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
-- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [pkiChallenge.js:1-106](file://backend/src/services/pkiChallenge.js#L1-L106)
+- [queries.js:1-443](file://backend/src/models/queries.js#L1-L443)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
-- [migrate.js:1-100](file://backend/src/models/migrate.js#L1-L100)
+- [migrate.js:1-101](file://backend/src/models/migrate.js#L1-L101)
 
 ## Core Components
 - BagsAuthVerifier service
@@ -115,17 +118,17 @@ MIGRATE --> MODELS_DB
   - verifyBagsSignature: verifies an Ed25519 signature using tweetnacl with base58-decoded inputs
   - completeBagsAuth: completes the Bags auth by submitting the signature and returning an API key reference
 - PKIChallenge service
-  - issueChallenge: generates a random nonce, constructs a challenge string, stores it in the database with expiration, and returns a base58-encoded challenge
-  - verifyChallenge: retrieves a pending verification, validates expiration, decodes inputs, verifies the Ed25519 signature, marks the challenge as completed, and updates the last verified timestamp
+  - issueChallenge: generates a random UUID nonce, constructs a challenge string with agent UUID, stores it in the database with expiration, and returns a base58-encoded challenge
+  - verifyChallenge: retrieves a pending verification by agent UUID and nonce, validates expiration, decodes inputs, verifies the Ed25519 signature, marks the challenge as completed, and updates the last verified timestamp
 
 Key cryptographic and encoding utilities:
 - tweetnacl for Ed25519 signature verification
 - bs58 for base58 encoding/decoding of messages, signatures, and public keys
-- crypto.randomUUID for nonce generation
+- crypto.randomUUID for UUID-based nonce generation
 
 **Section sources**
 - [bagsAuthVerifier.js:18-86](file://backend/src/services/bagsAuthVerifier.js#L18-L86)
-- [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
+- [pkiChallenge.js:18-100](file://backend/src/services/pkiChallenge.js#L18-L100)
 
 ## Architecture Overview
 The authentication architecture integrates external services and internal components to provide secure, verifiable identity for agents within the Bags ecosystem.
@@ -155,9 +158,9 @@ SVC_PKI --> SAID
 
 **Diagram sources**
 - [bagsAuthVerifier.js:11](file://backend/src/services/bagsAuthVerifier.js#L11)
-- [verify.js:17-109](file://backend/src/routes/verify.js#L17-L109)
-- [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
-- [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
+- [verify.js:17-118](file://backend/src/routes/verify.js#L17-L118)
+- [pkiChallenge.js:18-100](file://backend/src/services/pkiChallenge.js#L18-L100)
+- [queries.js:249-292](file://backend/src/models/queries.js#L249-L292)
 - [db.js:10-39](file://backend/src/models/db.js#L10-L39)
 
 ## Detailed Component Analysis
@@ -205,18 +208,18 @@ Implementation highlights:
 - [index.js:12](file://backend/src/config/index.js#L12)
 
 ### PKIChallenge Service
-The PKIChallenge service implements an Ed25519-based challenge-response mechanism to prevent spoofing and replay attacks. It manages challenge lifecycle and cryptographic verification.
+The PKIChallenge service implements an Ed25519-based challenge-response mechanism to prevent spoofing and replay attacks. It manages challenge lifecycle and cryptographic verification with UUID-based agent identification.
 
 ```mermaid
 flowchart TD
 Start(["Issue Challenge"]) --> GenNonce["Generate UUID nonce"]
-GenNonce --> BuildMsg["Build challenge string:<br/>AGENTID-VERIFY:{pubkey}:{nonce}:{timestamp}"]
+GenNonce --> BuildMsg["Build challenge string:<br/>AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}"]
 BuildMsg --> CalcExp["Calculate expires_at"]
-CalcExp --> Store["Store in agent_verifications:<br/>pubkey, nonce, challenge, expires_at"]
+CalcExp --> Store["Store in agent_verifications:<br/>agent_id, pubkey, nonce, challenge, expires_at"]
 Store --> Encode["Encode challenge with bs58"]
 Encode --> ReturnIssue["Return {nonce, challenge, expiresIn}"]
 subgraph "Verification Flow"
-VerifyStart(["Verify Response"]) --> Load["Load verification by pubkey + nonce"]
+VerifyStart(["Verify Response"]) --> Load["Load verification by agent_id + nonce"]
 Load --> Exists{"Exists and not completed?"}
 Exists --> |No| Expired["Throw 'Challenge not found or already completed'"]
 Exists --> |Yes| CheckExp["Compare expires_at with now"]
@@ -228,40 +231,40 @@ VerifySig --> Valid{"Valid signature?"}
 Valid --> |No| Invalid["Throw 'Invalid signature'"]
 Valid --> |Yes| MarkComplete["Mark verification completed=true"]
 MarkComplete --> UpdateLast["Update agent last_verified"]
-UpdateLast --> Success["Return {verified:true, pubkey, timestamp}"]
+UpdateLast --> Success["Return {verified:true, agentId, pubkey, timestamp}"]
 end
 ```
 
 **Diagram sources**
-- [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
-- [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
+- [pkiChallenge.js:18-100](file://backend/src/services/pkiChallenge.js#L18-L100)
+- [queries.js:266-292](file://backend/src/models/queries.js#L266-L292)
 
 Security features:
-- Nonce generation with crypto.randomUUID
-- Challenge string includes pubkey, nonce, and timestamp
+- UUID-based nonce generation with crypto.randomUUID
+- Challenge string includes agent UUID, pubkey, nonce, and timestamp
 - Expiration enforcement at both database and service levels
 - Single-use verification with completion flag
 - Ed25519 signature verification with tweetnacl
 - Base58 encoding for compact transport
 
 **Section sources**
-- [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
-- [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
+- [pkiChallenge.js:18-100](file://backend/src/services/pkiChallenge.js#L18-L100)
+- [queries.js:266-292](file://backend/src/models/queries.js#L266-L292)
 
 ### API Specifications
 
 #### PKI Challenge Endpoints
 - POST /verify/challenge
   - Purpose: Issue a new PKI challenge for an agent
-  - Request body: { pubkey: string }
+  - Request body: { agentId: string }
   - Response: { nonce: string, challenge: string, expiresIn: number }
-  - Validation: Requires existing agent record
+  - Validation: Requires existing agent record with UUID
   - Security: Rate-limited, challenge expires after configured TTL
 
 - POST /verify/response
   - Purpose: Verify a signed challenge response
-  - Request body: { pubkey: string, nonce: string, signature: string }
-  - Response: { verified: boolean, pubkey: string, timestamp: number }
+  - Request body: { agentId: string, nonce: string, signature: string }
+  - Response: { verified: boolean, agentId: string, pubkey: string, timestamp: number }
   - Validation: Checks existence, expiration, and signature validity
   - Security: Rate-limited, prevents replay via completion flag
 
@@ -272,7 +275,7 @@ Error responses:
 - 429 Too Many Requests: Rate limit exceeded
 
 **Section sources**
-- [verify.js:17-109](file://backend/src/routes/verify.js#L17-L109)
+- [verify.js:17-118](file://backend/src/routes/verify.js#L17-L118)
 - [rateLimit.js:50-55](file://backend/src/middleware/rateLimit.js#L50-L55)
 
 #### Bags Authentication Endpoints
@@ -295,14 +298,15 @@ Integration pattern:
 
 ### Data Models and Schema
 The authentication system relies on three core tables:
-- agent_identities: Stores agent records with status, scores, and metadata
-- agent_verifications: Stores issued challenges with nonce, expiration, and completion status
+- agent_identities: Stores agent records with UUID primary key, status, scores, and metadata
+- agent_verifications: Stores issued challenges with agent UUID, nonce, expiration, and completion status
 - agent_flags: Records community-reported flags for moderation
 
 ```mermaid
 erDiagram
 AGENT_IDENTITIES {
-varchar pubkey PK
+uuid agent_id PK
+varchar pubkey
 varchar name
 text description
 varchar token_mint
@@ -327,7 +331,8 @@ integer launches_count
 }
 AGENT_VERIFICATIONS {
 serial id PK
-varchar pubkey FK
+uuid agent_id FK
+varchar pubkey
 varchar nonce UK
 text challenge
 timestamptz expires_at
@@ -336,7 +341,8 @@ timestamptz created_at
 }
 AGENT_FLAGS {
 serial id PK
-varchar pubkey FK
+uuid agent_id FK
+varchar pubkey
 varchar reporter_pubkey
 text reason
 jsonb evidence
@@ -348,12 +354,12 @@ AGENT_IDENTITIES ||--o{ AGENT_FLAGS : "reported_by"
 ```
 
 **Diagram sources**
-- [migrate.js:9-64](file://backend/src/models/migrate.js#L9-L64)
-- [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
+- [migrate.js:10-65](file://backend/src/models/migrate.js#L10-L65)
+- [queries.js:249-292](file://backend/src/models/queries.js#L249-L292)
 
 **Section sources**
-- [migrate.js:9-64](file://backend/src/models/migrate.js#L9-L64)
-- [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
+- [migrate.js:10-65](file://backend/src/models/migrate.js#L10-L65)
+- [queries.js:249-292](file://backend/src/models/queries.js#L249-L292)
 
 ## Dependency Analysis
 The authentication services depend on several external libraries and internal modules with consistent .js extensions:
@@ -420,7 +426,7 @@ CONFIG --> BAGS_SERVICE
 - [migrate.js:7](file://backend/src/models/migrate.js#L7)
 
 ## Performance Considerations
-- Database indexing: The migration script creates indexes on frequently queried columns (status, bags_score, pubkey) to optimize discovery and filtering operations.
+- Database indexing: The migration script creates indexes on frequently queried columns (status, bags_score, pubkey, agent_id) to optimize discovery and filtering operations.
 - Connection pooling: The PostgreSQL pool uses environment-specific SSL configuration for production deployments.
 - Caching: Redis is available for challenge nonces and badge caching, with configurable TTL.
 - Rate limiting: Express-rate-limit middleware provides configurable request throttling to protect endpoints from abuse.
@@ -432,17 +438,17 @@ CONFIG --> BAGS_SERVICE
 - Challenge not found or already completed
   - Cause: Nonce reuse or expired verification record
   - Resolution: Issue a new challenge and ensure timely response submission
-  - Reference: [pkiChallenge.js:54-56](file://backend/src/services/pkiChallenge.js#L54-L56)
+  - Reference: [pkiChallenge.js:57-59](file://backend/src/services/pkiChallenge.js#L57-L59)
 
 - Challenge has expired
   - Cause: Response submitted after expiration window
   - Resolution: Request a new challenge before attempting verification
-  - Reference: [pkiChallenge.js:61-63](file://backend/src/services/pkiChallenge.js#L61-L63)
+  - Reference: [pkiChallenge.js:64-66](file://backend/src/services/pkiChallenge.js#L64-L66)
 
 - Invalid signature
   - Cause: Incorrect message format, wrong key, or corrupted data
-  - Resolution: Verify message includes correct nonce, use proper Ed25519 key, ensure base58 encoding/decoding
-  - Reference: [pkiChallenge.js:82](file://backend/src/services/pkiChallenge.js#L82)
+  - Resolution: Verify message includes correct agent UUID, nonce, and timestamp, use proper Ed25519 key, ensure base58 encoding/decoding
+  - Reference: [pkiChallenge.js:84-86](file://backend/src/services/pkiChallenge.js#L84-L86)
 
 - Rate limit exceeded
   - Cause: Too many requests within time window
@@ -457,24 +463,22 @@ The system employs a centralized error handler that:
 
 **Section sources**
 - [errorHandler.js:15-40](file://backend/src/middleware/errorHandler.js#L15-L40)
-- [verify.js:84-104](file://backend/src/routes/verify.js#L84-L104)
+- [verify.js:91-117](file://backend/src/routes/verify.js#L91-L117)
 
 ### Security Considerations
 - Spoofing prevention: Ed25519 signatures require possession of the private key; copying only metadata is insufficient
-- Replay attack protection: Nonces are single-use and expire after a configured time window
+- Replay attack protection: UUID-based nonces are single-use and expire after a configured time window
 - Data validation: All inputs are validated and sanitized before processing
 - Transport security: HTTPS is recommended for production deployments
 - Secret management: API keys and sensitive configuration are loaded from environment variables
 
 **Section sources**
-- [pkiChallenge.js:18-38](file://backend/src/services/pkiChallenge.js#L18-L38)
+- [pkiChallenge.js:18-41](file://backend/src/services/pkiChallenge.js#L18-L41)
 - [bagsAuthVerifier.js:44-57](file://backend/src/services/bagsAuthVerifier.js#L44-L57)
 - [index.js:12](file://backend/src/config/index.js#L12)
 
 ## Conclusion
-The AgentID authentication services provide a robust, PKI-based solution for verifying agent identities within the Bags ecosystem. The BagsAuthVerifier service seamlessly integrates with the Bags Ed25519 authentication flow, while the PKIChallenge service offers comprehensive spoofing prevention and replay protection through Ed25519 signatures and nonce management. Together, these components establish a secure foundation for agent registration, ongoing verification, and trust badge issuance.
-
-**Updated** Service modules now consistently use explicit .js extensions in import statements, improving module resolution and maintainability across the authentication system.
+The AgentID authentication services provide a robust, PKI-based solution for verifying agent identities within the Bags ecosystem. The BagsAuthVerifier service seamlessly integrates with the Bags Ed25519 authentication flow, while the PKIChallenge service offers comprehensive spoofing prevention and replay protection through Ed25519 signatures and UUID-based nonce management. The enhanced authentication system now uses UUID-based agent identification throughout the flow, with challenge strings containing agent UUID for improved security and traceability. Together, these components establish a secure foundation for agent registration, ongoing verification, and trust badge issuance.
 
 ## Appendices
 
@@ -490,7 +494,7 @@ Required environment variables:
 - CHALLENGE_EXPIRY_SECONDS: Challenge expiration in seconds
 
 **Section sources**
-- [index.js:6-28](file://backend/src/config/index.js#L6-L28)
+- [index.js:6-31](file://backend/src/config/index.js#L6-L31)
 
 ### Integration Patterns
 - External API integration: The BagsAuthVerifier service communicates with the Bags Public API using the x-api-key header scheme
@@ -503,11 +507,11 @@ Required environment variables:
 
 ### Practical Examples
 - Authentication workflow:
-  1. Client calls POST /verify/challenge with pubkey
+  1. Client calls POST /verify/challenge with agentId
   2. Server responds with challenge and nonce
   3. Client signs challenge with Ed25519 private key
-  4. Client calls POST /verify/response with pubkey, nonce, and signature
-  5. Server validates signature and marks challenge as completed
+  4. Client calls POST /verify/response with agentId, nonce, and signature
+  5. Server validates signature and returns {verified: true, agentId, pubkey, timestamp}
 
 - Bags authentication workflow:
   1. Client calls BagsAuthVerifier.initBagsAuth with pubkey
@@ -516,5 +520,21 @@ Required environment variables:
   4. Service verifies signature and calls Bags callback
 
 **Section sources**
-- [verify.js:17-109](file://backend/src/routes/verify.js#L17-L109)
+- [verify.js:17-118](file://backend/src/routes/verify.js#L17-L118)
 - [bagsAuthVerifier.js:18-86](file://backend/src/services/bagsAuthVerifier.js#L18-L86)
+
+### Challenge String Format
+The challenge string format now includes agent UUID for enhanced security:
+```
+AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}
+```
+
+Where:
+- `{agentId}`: UUID of the agent being verified
+- `{pubkey}`: Agent's public key
+- `{nonce}`: Random UUID nonce
+- `{timestamp}`: Unix timestamp when challenge was created
+
+**Section sources**
+- [pkiChallenge.js:21](file://backend/src/services/pkiChallenge.js#L21)
+- [pkiChallenge.test.js:74](file://backend/tests/pkiChallenge.test.js#L74)

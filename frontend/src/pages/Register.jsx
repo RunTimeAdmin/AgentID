@@ -273,7 +273,7 @@ export default function Register() {
       if (!formData.pubkey.trim()) {
         newErrors.pubkey = 'Public key is required';
       } else if (formData.pubkey.length < 32) {
-        newErrors.pubkey = 'Invalid Solana public key';
+        newErrors.pubkey = 'Invalid Ed25519 public key';
       }
       if (!formData.name.trim()) {
         newErrors.name = 'Agent name is required';
@@ -427,10 +427,10 @@ export default function Register() {
               name="pubkey"
               value={formData.pubkey}
               onChange={handleChange}
-              placeholder="Enter Solana wallet address (pubkey)"
+              placeholder="Enter Ed25519 public key (base58-encoded)"
               required
               error={errors.pubkey}
-              helpText="The public key of your agent's Solana wallet"
+              helpText="Your agent's Ed25519 public key for cryptographic identity verification"
             />
             <FormField
               label="Agent Name"
@@ -515,25 +515,25 @@ export default function Register() {
                 </p>
               </div>
 
-              {/* Solana CLI */}
+              {/* CLI Signing */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <svg className="w-4 h-4 text-[var(--accent-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span className="text-sm font-medium text-[var(--text-primary)]">Solana CLI</span>
+                  <span className="text-sm font-medium text-[var(--text-primary)]">CLI Signing</span>
                 </div>
                 <div className="ml-6 space-y-2">
                   <p className="text-xs text-[var(--text-muted)]">
-                    Save the challenge to a file and sign using the Solana CLI:
+                    Save the challenge to a file and sign using your Ed25519 private key:
                   </p>
                   <div className="bg-[var(--bg-primary)] p-3 rounded-lg font-mono text-xs text-[var(--text-secondary)] overflow-x-auto">
                     <div className="text-[var(--text-muted)]"># Save challenge to file</div>
                     <div>echo "<span className="text-amber-400">{formData.challenge}</span>" &gt; challenge.txt</div>
                     <div className="mt-1 text-[var(--text-muted)]"># Sign the message</div>
-                    <div>solana sign-offchain-message challenge.txt --keypair &lt;KEYPAIR_PATH&gt;</div>
-                    <div className="mt-1 text-[var(--text-muted)]"># Or sign directly:</div>
-                    <div>echo "<span className="text-amber-400">{formData.challenge}</span>" | solana sign-offchain-message /dev/stdin</div>
+                    <div># Using libsodium or similar Ed25519 signing tool</div>
+                    <div>sign_challenge(challenge.txt, private_key)</div>
+                    <div className="mt-1 text-[var(--text-muted)]"># Or use any Ed25519-compatible signing utility</div>
                   </div>
                 </div>
               </div>
@@ -585,8 +585,8 @@ export default function Register() {
               name="creatorWallet"
               value={formData.creatorWallet}
               onChange={handleChange}
-              placeholder="Enter creator wallet address"
-              helpText="The wallet address of the agent creator"
+              placeholder="Enter creator public key (optional)"
+              helpText="Ed25519 public key of the agent creator for attribution"
             />
 
             <TextAreaField

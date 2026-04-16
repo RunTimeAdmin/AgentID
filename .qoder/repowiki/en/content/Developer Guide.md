@@ -4,6 +4,7 @@
 **Referenced Files in This Document**
 - [README.md](file://README.md)
 - [DEVELOPER_GUIDE.md](file://docs/DEVELOPER_GUIDE.md)
+- [DEVELOPER_GUIDE_TRUSTMARK.md](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md)
 - [API_REFERENCE.md](file://docs/API_REFERENCE.md)
 - [WIDGET_GUIDE.md](file://docs/WIDGET_GUIDE.md)
 - [docker-compose.yml](file://docker-compose.yml)
@@ -24,31 +25,37 @@
 
 ## Update Summary
 **Changes Made**
-- Updated all domain references from `your-domain.io` to `agentid.provenanceai.network` in widget examples
-- Corrected inconsistent SSL certificate domain references in Nginx configuration examples
-- Standardized domain usage across all deployment and API documentation
-- Fixed mixed domain references in README and deployment guides
+- Added comprehensive cryptographic operations section covering Ed25519 keypair generation and signature verification
+- Integrated multi-language implementation examples (Node.js, Python, Go, Rust, Java) from DEVELOPER_GUIDE_TRUSTMARK.md
+- Enhanced PKI challenge-response documentation with detailed cryptographic requirements
+- Updated API reference with comprehensive error handling and troubleshooting guidance
+- Expanded reputation scoring system documentation with detailed factor breakdown
+- Added comprehensive widget integration examples and customization options
 
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
-5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+5. [Cryptographic Operations](#cryptographic-operations)
+6. [Multi-Language Integration Examples](#multi-language-integration-examples)
+7. [Detailed Component Analysis](#detailed-component-analysis)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Troubleshooting Guide](#troubleshooting-guide)
+11. [Conclusion](#conclusion)
+12. [Appendices](#appendices)
 
 ## Introduction
 AgentID is the trust verification layer for Bags agents on Solana. It integrates Bags authentication, binds agent identities to the SAID Identity Gateway, computes a 5-factor reputation score, and exposes human-readable trust badges and embeddable widgets. The backend is a Node.js/Express application with PostgreSQL and Redis, while the frontend is a React/Vite application.
+
+**Updated** The platform now provides comprehensive developer integration support with detailed cryptographic operations, multi-language implementation examples, and extensive troubleshooting guidance.
 
 ## Project Structure
 The repository is organized into:
 - backend: Express server, configuration, middleware, models (database and Redis), services (business logic), routes (HTTP endpoints), and tests
 - frontend: React application with pages, components, API client, and widget
-- docs: API reference, developer guide, and widget guide
+- docs: API reference, developer guide, comprehensive integration guide, and widget guide
 - docker-compose.yml: Infrastructure provisioning for PostgreSQL and Redis
 - Root README with quick start, API reference, and reputation scoring
 
@@ -158,6 +165,130 @@ Services --> Ext["External APIs<br/>Bags, SAID"]
 
 **Section sources**
 - [DEVELOPER_GUIDE.md:327-436](file://docs/DEVELOPER_GUIDE.md#L327-L436)
+
+## Cryptographic Operations
+
+### Ed25519 Key Pair Generation
+AgentID uses Ed25519 elliptic curve cryptography for secure identity verification. The system generates cryptographically secure key pairs using the tweetnacl library.
+
+**Key Generation Process:**
+1. Generate a new Ed25519 key pair using `nacl.sign.keyPair()`
+2. Encode public and private keys using Base58 encoding
+3. Store private key securely for signature operations
+4. Use public key for agent identification and verification
+
+**Implementation Requirements:**
+- **Node.js 18+** required for Ed25519 cryptographic operations
+- **tweetnacl** library for Ed25519 signature generation and verification
+- **bs58** library for Base58 encoding/decoding
+
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:9-19](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L9-L19)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:30-45](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L30-L45)
+
+### PKI Challenge-Response Protocol
+The PKI challenge-response system provides cryptographic proof of key ownership:
+
+**Challenge Issuance:**
+1. Generate UUID v4 nonce
+2. Construct challenge message: `AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}`
+3. Encode challenge as Base58 string
+4. Store challenge with expiration timestamp
+5. Return challenge to client
+
+**Response Verification:**
+1. Base58-decode stored challenge
+2. Verify challenge hasn't expired
+3. Sign decoded challenge bytes with private key
+4. Base58-encode signature
+5. Verify signature against stored public key
+6. Mark challenge as completed
+
+**Critical Implementation Details:**
+- The challenge must be Base58-decoded before signing
+- Sign the raw bytes, not the Base58-encoded string
+- Challenge expires after 5 minutes (configurable via `CHALLENGE_EXPIRY_SECONDS`)
+
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:149-218](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L149-L218)
+- [backend/src/services/pkiChallenge.js:18-44](file://backend/src/services/pkiChallenge.js#L18-L44)
+- [backend/src/services/pkiChallenge.js:55-103](file://backend/src/services/pkiChallenge.js#L55-L103)
+
+## Multi-Language Integration Examples
+
+### Node.js Implementation
+Complete implementation using tweetnacl and bs58 libraries:
+
+**Installation:**
+```bash
+npm install tweetnacl bs58
+```
+
+**Key Operations:**
+- Generate Ed25519 key pair
+- Sign registration messages with `nacl.sign.detached()`
+- Base58 encode/decode for API communication
+- Handle challenge-response flow
+
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:24-45](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L24-L45)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:62-139](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L62-L139)
+
+### Python Implementation
+Using PyNaCl library for cryptographic operations:
+
+**Installation:**
+```bash
+pip install pynacl base58 requests
+```
+
+**Key Features:**
+- Generate signing keys with `nacl.signing.SigningKey.generate()`
+- Sign messages using `signing_key.sign()`
+- Base58 encoding with `base58.b58encode()`
+- HTTP requests with `requests.post()`
+
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:556-638](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L556-L638)
+
+### Go Implementation
+Using Go's built-in crypto/ed25519 package:
+
+**Key Features:**
+- Generate key pairs with `ed25519.GenerateKey()`
+- Sign messages with `ed25519.Sign()`
+- Base58 encoding/decoding utilities
+- HTTP client for API communication
+
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:13-18](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L13-L18)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:556-638](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L556-L638)
+
+### Rust Implementation
+Using ed25519-dalek crate:
+
+**Key Features:**
+- Generate key pairs with `Keypair::generate()`
+- Sign messages with `Keypair::sign()`
+- Base58 encoding with dedicated crates
+- Async/await support for API calls
+
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:13-18](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L13-L18)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:556-638](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L556-L638)
+
+### Java Implementation
+Using net.i2p.crypto:eddsa library:
+
+**Key Features:**
+- Generate key pairs with `Ed25519KeyPairGenerator`
+- Sign messages with `EdDSAEngine`
+- Base58 encoding utilities
+- HTTP client for API communication
+
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:13-18](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L13-L18)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:556-638](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L556-L638)
 
 ## Detailed Component Analysis
 
@@ -376,22 +507,60 @@ Services --> Ext["External APIs"]
 - Recommendations: Increase cache TTL for production, monitor Redis and DB latency, and consider connection pooling tuning
 
 ## Troubleshooting Guide
-Common issues and resolutions:
-- Missing environment variables: The server exits early if required variables are missing; ensure DATABASE_URL, BAGS_API_KEY, and REDIS_URL are configured
-- CORS errors: Verify CORS_ORIGIN matches the frontend origin
-- Redis unavailability: Redis is a cache; operations continue without it, but badge caching will be disabled
-- SAID unreachability: Registration continues without SAID binding; trust score fallback occurs
-- Rate limits: Excessive requests are throttled; adjust rate limit settings as needed
-- Database connectivity: Check connection string and network; production environments may require SSL configuration
+
+### Cryptographic Issues
+**"My signature is invalid"**
+- Verify you're using the correct private key that matches your public key
+- Ensure you're signing the raw bytes, not the Base58 string
+- Check that both message and signature are Base58-encoded in the request
+- Verify the message format is exactly: `AGENTID-REGISTER:{name}:{nonce}:{timestamp}`
+
+**"Challenge expired"**
+- The 5-minute timer starts when you request the challenge, not when you start signing
+- If your signing process is slow or you get distracted, request a fresh challenge
+- Check system clock synchronization if experiencing frequent expiration
+
+**"Invalid Solana address"**
+- The pubkey must be 32-88 characters long
+- Must be valid Base58 encoding
+- Must be a valid Ed25519 public key
+
+### API Integration Issues
+**HTTP Status Code 400 "Message must contain the nonce"**
+- Cause: The decoded message doesn't include the expected nonce
+- Solution: Ensure your message format is exactly: `AGENTID-REGISTER:{name}:{nonce}:{timestamp}`
+
+**HTTP Status Code 401 "Invalid signature"**
+- Cause: The signature doesn't match the message or wrong private key used
+- Solution: Verify you're using the correct private key, ensure you're signing the raw bytes, not the Base58 string
+
+**HTTP Status Code 409 "Already registered"**
+- Cause: A combination of this pubkey + name already exists
+- Solution: Use a different name or check if you've already registered this agent
+
+**HTTP Status Code 429 "Rate limit exceeded"**
+- Cause: Too many registration/verification attempts
+- Solution: Wait 15 minutes before trying again
+
+### Widget Integration Issues
+**Widget shows UNVERIFIED**
+- You need to complete the verification flow (Step 2)
+- Registration alone doesn't verify key ownership
+- Complete the challenge-response flow to achieve verified status
+
+**Badge data not updating**
+- The widget auto-refreshes every 60 seconds
+- Badge data is cached for 60 seconds (configurable via `BADGE_CACHE_TTL`)
+- Force refresh by adding cache-buster parameter
 
 **Section sources**
-- [backend/server.js:3-23](file://backend/server.js#L3-L23)
-- [backend/src/config/index.js:6-31](file://backend/src/config/index.js#L6-L31)
-- [backend/src/models/redis.js:22-30](file://backend/src/models/redis.js#L22-L30)
-- [backend/src/services/saidBinding.js:50-53](file://backend/src/services/saidBinding.js#L50-L53)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:457-547](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L457-L547)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:505-547](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L505-L547)
 
 ## Conclusion
-AgentID provides a robust trust layer for Bags agents on Solana, integrating authentication, identity binding, reputation scoring, and trust badges. The modular backend architecture, combined with caching and resilient external integrations, enables scalable deployment and easy extension.
+AgentID provides a robust trust layer for Bags agents on Solana, integrating authentication, identity binding, reputation scoring, and trust badges. The modular backend architecture, combined with comprehensive cryptographic operations, caching, and resilient external integrations, enables scalable deployment and easy extension across multiple programming languages.
+
+**Updated** The platform now offers extensive developer integration support with detailed cryptographic operations, multi-language implementation examples, and comprehensive troubleshooting guidance, making it accessible to developers across different technology stacks.
 
 ## Appendices
 
@@ -424,78 +593,80 @@ AgentID provides a robust trust layer for Bags agents on Solana, integrating aut
 **Section sources**
 - [DEVELOPER_GUIDE.md:128-164](file://docs/DEVELOPER_GUIDE.md#L128-L164)
 
-### Domain Migration and Deployment
+### Cryptographic Standards and Compliance
+- **Ed25519**: Industry-standard elliptic curve for digital signatures
+- **Base58 Encoding**: Used for compact representation of cryptographic keys
+- **Challenge Format**: `AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}`
+- **Message Format**: `AGENTID-REGISTER:{name}:{nonce}:{timestamp}`
+- **Nonce Lifecycle**: UUID v4 with 5-minute expiration
+- **Signature Verification**: Local verification using tweetnacl library
 
-**Updated** The AgentID service now operates under the domain `agentid.provenanceai.network`. All deployment configurations, SSL certificates, and API endpoints have been updated to reflect this migration.
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:521-547](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L521-L547)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:541-544](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L541-L544)
 
-#### Nginx Configuration
-The Nginx configuration has been updated to use the new domain throughout:
+### Multi-Language Implementation Matrix
 
-```nginx
-server {
-    listen 80;
-    server_name agentid.provenanceai.network;
-    return 301 https://$server_name$request_uri;
-}
+| Language | Library | Installation | Key Features |
+|----------|---------|--------------|--------------|
+| Node.js | tweetnacl, bs58 | `npm install tweetnacl bs58` | Complete implementation, Base58 encoding |
+| Python | pynacl | `pip install pynacl base58` | PyNaCl integration, HTTP requests |
+| Go | crypto/ed25519 | `go get golang.org/x/crypto/ed25519` | Built-in crypto support |
+| Rust | ed25519-dalek | `cargo add ed25519-dalek` | Memory-safe implementation |
+| Java | net.i2p.crypto:eddsa | Maven dependency | Enterprise-grade security |
 
-server {
-    listen 443 ssl http2;
-    server_name agentid.provenanceai.network;
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:13-18](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L13-L18)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:556-638](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L556-L638)
 
-    ssl_certificate /etc/letsencrypt/live/agentid.provenanceai.network/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/agentid.provenanceai.network/privkey.pem;
+### Reputation Scoring System Details
 
-    location / {
-        proxy_pass http://localhost:3002;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
+**5-Factor Model Breakdown:**
+- **Fee Activity (30%)**: Based on fee claims in SOL (1 pt per 0.1 SOL)
+- **Success Rate (25%)**: Ratio of successful to total actions
+- **Registration Age (20%)**: +1 per day, capped at 20
+- **SAID Trust (15%)**: External trust verification from SAID Identity Gateway
+- **Community (10%)**: Penalty for unresolved flags (10=none, 5=one, 0=two+)
 
-#### SSL Certificate Management
-Certificates are now managed through Certbot for the domain `agentid.provenanceai.network`:
+**Trust Labels:**
+- **HIGH (80-100)**: Highly trusted agent with strong activity history
+- **MEDIUM (60-79)**: Moderately trusted agent with established presence
+- **LOW (40-59)**: New or limited-activity agent
+- **UNVERIFIED (0-39)**: Insufficient data or flagged concerns
 
-```bash
-# Install Certbot
-sudo apt install certbot python3-certbot-nginx
+**Section sources**
+- [DEVELOPER_GUIDE_TRUSTMARK.md:425-453](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L425-L453)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:439-445](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L439-L445)
 
-# Obtain certificate
-sudo certbot --nginx -d agentid.provenanceai.network
+### Widget Integration Examples
 
-# Auto-renewal test
-sudo certbot renew --dry-run
-```
-
-#### Widget Embed Examples
-All widget embed examples have been updated to use the new domain:
-
+**Basic iframe Embed:**
 ```html
 <iframe 
-  src="https://agentid.provenanceai.network/widget/AGENT_PUBKEY"
-  width="320" height="80" frameborder="0">
+  src="https://agentid.provenanceai.network/widget/{AGENT_PUBKEY}"
+  width="400" 
+  height="300" 
+  frameborder="0"
+  style="border-radius: 12px; overflow: hidden;"
+  title="AgentID Trust Badge">
 </iframe>
 ```
 
-#### API Base URLs
-The API base URL has been standardized to use the new domain:
+**Customized Widget:**
+```html
+<iframe 
+  src="https://agentid.provenanceai.network/widget/{AGENT_PUBKEY}?theme=dark&compact=true"
+  width="320" 
+  height="200" 
+  frameborder="0">
+</iframe>
+```
 
-- **Production**: `https://agentid.provenanceai.network/api`
-- **Development**: `http://localhost:3002/api`
+**SVG Badge for Documentation:**
+```markdown
+![Trust Badge](https://agentid.provenanceai.network/badge/{AGENT_PUBKEY}/svg)
+```
 
 **Section sources**
-- [DEVELOPER_GUIDE.md:675-726](file://docs/DEVELOPER_GUIDE.md#L675-L726)
-- [DEVELOPER_GUIDE.md:128-174](file://docs/DEVELOPER_GUIDE.md#L128-L174)
-- [README.md:70-104](file://README.md#L70-L104)
-- [API_REFERENCE.md:3-5](file://docs/API_REFERENCE.md#L3-L5)
-- [Backend-API-Reference.md:27-29](file://AgentID-wiki-temp/Backend-API-Reference.md#L27-L29)
-- [Widget-Guide.md:33-35](file://AgentID-wiki-temp/Widget-Guide.md#L33-L35)
-- [Widget-Guide.md:51-53](file://AgentID-wiki-temp/Widget-Guide.md#L51-L53)
-- [Widget-Guide.md:65-68](file://AgentID-wiki-temp/Widget-Guide.md#L65-L68)
-- [Configuration-Management.md:34](file://AgentID-wiki-temp/Configuration-Management.md#L34)
+- [DEVELOPER_GUIDE_TRUSTMARK.md:223-340](file://docs/DEVELOPER_GUIDE_TRUSTMARK.md#L223-L340)
+- [WIDGET_GUIDE.md:27-58](file://docs/WIDGET_GUIDE.md#L27-L58)

@@ -67,6 +67,11 @@ if [ "$DB_PASSWORD" = "CHANGE_THIS_STRONG_PASSWORD" ]; then
     exit 1
 fi
 
+if [ ${#DB_PASSWORD} -lt 8 ]; then
+    log_error "DB_PASSWORD must be at least 8 characters"
+    exit 1
+fi
+
 # Check required commands
 log_info "Checking prerequisites..."
 check_command psql

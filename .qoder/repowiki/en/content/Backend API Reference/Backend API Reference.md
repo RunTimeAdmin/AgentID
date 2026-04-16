@@ -19,15 +19,17 @@
 - [config/index.js](file://backend/src/config/index.js)
 - [package.json](file://backend/package.json)
 - [API_REFERENCE.md](file://docs/API_REFERENCE.md)
+- [api.js](file://frontend/src/lib/api.js)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced Ed25519 cryptographic authentication documentation for flag submissions
-- Expanded rate limiting documentation with detailed configurations
-- Updated authentication flow specifications with comprehensive signature requirements
-- Added comprehensive PKI challenge-response message format documentation
-- Enhanced security considerations for cryptographic operations
+- Updated authentication endpoints to reflect route path standardization: /verify/ prefix removed from challenge and response endpoints
+- Challenge endpoint now at /challenge instead of /verify/challenge
+- Response endpoint now at /response instead of /verify/response
+- Enhanced registration flow with base58 encoding validation and nonce checking
+- Updated all endpoint URLs and parameter references to reflect current implementation
+- Corrected rate limiting documentation to match actual route structure
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -42,7 +44,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the AgentID backend REST API, covering authentication and registration, verification, trust and reputation, discovery and registry, attestation and flagging, and widget endpoints. It specifies HTTP methods, URL patterns, request/response schemas, authentication requirements, rate limiting, and security considerations. Practical usage examples are included via curl commands and code snippet paths.
+This document describes the AgentID backend REST API, covering authentication and registration, verification, trust and reputation, discovery and registry, attestation and flagging, and widget endpoints. The API has been refactored to use UUID-based agent identifiers (:agentId) instead of public key-based parameters (:pubkey). It specifies HTTP methods, URL patterns, request/response schemas, authentication requirements, rate limiting, and security considerations. Practical usage examples are included via curl commands and code snippet paths.
 
 ## Project Structure
 The backend is an Express server that mounts route modules under specific prefixes. Middleware applies global and per-route rate limits, and security headers are enforced. External integrations include BAGS and SAID gateways for authentication and reputation.
@@ -58,11 +60,11 @@ AuthLimiter["Auth Rate Limiter<br/>20 per 15 min/IP"]
 subgraph "Routes"
 RRegister["POST /register<br/>register.js"]
 RVerify["/verify/*<br/>verify.js"]
-RBadge["GET /badge/*<br/>badge.js"]
-RReputation["GET /reputation/:pubkey<br/>reputation.js"]
+RBadge["GET /badge/:agentId<br/>badge.js"]
+RReputation["GET /reputation/:agentId<br/>reputation.js"]
 RAgents["/agents/*<br/>agents.js"]
-RAttest["/agents/:pubkey/*<br/>attestations.js"]
-RWidget["GET /widget/:pubkey<br/>widget.js"]
+RAttest["/agents/:agentId/*<br/>attestations.js"]
+RWidget["GET /widget/:agentId<br/>widget.js"]
 end
 Client --> ExpressApp
 ExpressApp --> Helmet
@@ -88,23 +90,23 @@ AuthLimiter --> RVerify
 ## Core Components
 - Authentication and Registration
   - POST /register: Full registration with Bags signature verification and optional SAID binding.
-  - POST /verify/challenge: Issue a PKI challenge for an agent.
-  - POST /verify/response: Verify a signed challenge response.
+  - POST /challenge: Issue a PKI challenge for an agent using agent UUID.
+  - POST /response: Verify a signed challenge response using agent UUID.
 - Trust and Reputation
-  - GET /reputation/:pubkey: Full reputation breakdown.
-  - GET /badge/:pubkey, GET /badge/:pubkey/svg: Trust badge JSON and SVG.
+  - GET /reputation/:agentId: Full reputation breakdown.
+  - GET /badge/:agentId, GET /badge/:agentId/svg: Trust badge JSON and SVG.
 - Discovery and Registry
   - GET /agents: List agents with filters and pagination.
-  - GET /agents/:pubkey: Agent detail with reputation.
+  - GET /agents/:agentId: Agent detail with reputation.
   - GET /discover: Capability-based discovery of verified agents.
-  - PUT /agents/:pubkey/update: Update agent metadata with Ed25519 signature verification.
+  - PUT /agents/:agentId/update: Update agent metadata with Ed25519 signature verification.
 - Attestations and Flagging
-  - POST /agents/:pubkey/attest: Record action success/failure and optionally refresh reputation.
-  - POST /agents/:pubkey/flag: Flag suspicious behavior with comprehensive Ed25519 cryptographic authentication.
-  - GET /agents/:pubkey/attestations: Agent action statistics.
-  - GET /agents/:pubkey/flags: Flags filed against an agent.
+  - POST /agents/:agentId/attest: Record action success/failure and optionally refresh reputation.
+  - POST /agents/:agentId/flag: Flag suspicious behavior with comprehensive Ed25519 cryptographic authentication.
+  - GET /agents/:agentId/attestations: Agent action statistics.
+  - GET /agents/:agentId/flags: Flags filed against an agent.
 - Widget
-  - GET /widget/:pubkey: Embeddable HTML widget.
+  - GET /widget/:agentId: Embeddable HTML widget.
 
 **Section sources**
 - [register.js:59-153](file://backend/src/routes/register.js#L59-L153)
@@ -115,7 +117,7 @@ AuthLimiter --> RVerify
 - [widget.js:32-100](file://backend/src/routes/widget.js#L32-L100)
 
 ## Architecture Overview
-The API follows a modular route architecture with per-route rate limiting. Authentication endpoints use stricter limits. Data transformations normalize snake_case database fields to camelCase for clients. External services integrate with BAGS for wallet ownership verification and SAID for reputation and discovery.
+The API follows a modular route architecture with per-route rate limiting. Authentication endpoints use stricter limits. Data transformations normalize snake_case database fields to camelCase for clients. External services integrate with BAGS for wallet ownership verification and SAID for reputation and discovery. All endpoints now use UUID-based agent identification.
 
 ```mermaid
 sequenceDiagram
@@ -133,12 +135,12 @@ C->>S : "HTTP Request"
 S->>RL : "Apply default or auth limiter"
 RL-->>S : "Allow/Deny"
 S->>Reg : "POST /register"
-S->>Ver : "POST /verify/challenge | POST /verify/response"
-S->>Bad : "GET /badge/ : pubkey | GET /badge/ : pubkey/svg"
-S->>Rep : "GET /reputation/ : pubkey"
-S->>Ag : "GET /agents | GET /agents/ : pubkey | GET /discover | PUT /agents/ : pubkey/update"
-S->>Att : "POST /agents/ : pubkey/attest | POST /agents/ : pubkey/flag | GET .../attestations | GET .../flags"
-S->>Wid : "GET /widget/ : pubkey"
+S->>Ver : "POST /challenge | POST /response"
+S->>Bad : "GET /badge/ : agentId | GET /badge/ : agentId/svg"
+S->>Rep : "GET /reputation/ : agentId"
+S->>Ag : "GET /agents | GET /agents/ : agentId | GET /discover | PUT /agents/ : agentId/update"
+S->>Att : "POST /agents/ : agentId/attest | POST /agents/ : agentId/flag | GET .../attestations | GET .../flags"
+S->>Wid : "GET /widget/ : agentId"
 S-->>C : "Response"
 ```
 
@@ -166,7 +168,7 @@ S-->>C : "Response"
   - SAID binding:
     - Non-blocking attempt to register with SAID gateway; response includes registration status.
   - Responses:
-    - 201 Created: { agent, said }
+    - 201 Created: { agent, agentId, said }
     - 400 Bad Request: validation errors
     - 401 Unauthorized: invalid signature
     - 409 Conflict: agent already registered
@@ -177,32 +179,32 @@ S-->>C : "Response"
   - Example curl:
     - [curl snippet path:59-153](file://backend/src/routes/register.js#L59-L153)
 
-- POST /verify/challenge
-  - Purpose: Issue a PKI challenge for an agent.
+- POST /challenge
+  - Purpose: Issue a PKI challenge for an agent using agent UUID.
   - Authentication: None (strict rate limiting).
   - Rate limit: Auth limiter (20 per 15 minutes).
-  - Request body: { pubkey }
+  - Request body: { agentId }
   - Responses:
     - 200 OK: { nonce, challenge (base58), expiresIn }
-    - 400 Bad Request: missing pubkey
+    - 400 Bad Request: missing agentId
     - 404 Not Found: agent not found
   - Security:
     - Challenge stored with expiration; encoded in base58.
   - Example curl:
     - [curl snippet path:20-49](file://backend/src/routes/verify.js#L20-L49)
 
-- POST /verify/response
-  - Purpose: Verify signed challenge response.
+- POST /response
+  - Purpose: Verify signed challenge response using agent UUID.
   - Authentication: None (strict rate limiting).
   - Rate limit: Auth limiter (20 per 15 minutes).
-  - Request body: { pubkey, nonce, signature }
+  - Request body: { agentId, nonce, signature }
   - Validation:
     - All fields required and strings.
   - Verification:
     - Decodes inputs (base58), verifies Ed25519 signature against constructed challenge.
     - Checks expiration and completion status.
   - Responses:
-    - 200 OK: { verified, pubkey, timestamp }
+    - 200 OK: { verified, agentId, timestamp }
     - 400 Bad Request: missing fields
     - 401 Unauthorized: invalid/expired signature or encoding
     - 404 Not Found: challenge not found or completed
@@ -219,28 +221,28 @@ S-->>C : "Response"
 - [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
 
 ### Trust and Reputation Endpoints
-- GET /reputation/:pubkey
-  - Purpose: Retrieve full reputation breakdown for an agent.
+- GET /reputation/:agentId
+  - Purpose: Retrieve full reputation breakdown for an agent using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Responses:
-    - 200 OK: { pubkey, score, label, breakdown }
+    - 200 OK: { agentId, pubkey, score, label, breakdown }
     - 404 Not Found: agent not found
   - Example curl:
     - [curl snippet path:17-41](file://backend/src/routes/reputation.js#L17-L41)
 
-- GET /badge/:pubkey
-  - Purpose: Return trust badge JSON.
+- GET /badge/:agentId
+  - Purpose: Return trust badge JSON using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Responses:
-    - 200 OK: { pubkey, name, status, badge, label, score, bags_score, saidTrustScore, saidLabel, registeredAt, lastVerified, totalActions, successRate, capabilities, tokenMint, widgetUrl }
+    - 200 OK: { agentId, pubkey, name, status, badge, label, score, bags_score, saidTrustScore, saidLabel, registeredAt, lastVerified, totalActions, successRate, capabilities, tokenMint, widgetUrl }
     - 404 Not Found: agent not found
   - Example curl:
     - [curl snippet path:16-32](file://backend/src/routes/badge.js#L16-L32)
 
-- GET /badge/:pubkey/svg
-  - Purpose: Return trust badge SVG image.
+- GET /badge/:agentId/svg
+  - Purpose: Return trust badge SVG image using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Responses:
@@ -270,8 +272,8 @@ S-->>C : "Response"
   - Example curl:
     - [curl snippet path:23-55](file://backend/src/routes/agents.js#L23-L55)
 
-- GET /agents/:pubkey
-  - Purpose: Retrieve agent detail with reputation.
+- GET /agents/:agentId
+  - Purpose: Retrieve agent detail with reputation using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Responses:
@@ -292,18 +294,18 @@ S-->>C : "Response"
   - Example curl:
     - [curl snippet path:93-114](file://backend/src/routes/agents.js#L93-L114)
 
-- PUT /agents/:pubkey/update
-  - Purpose: Update agent metadata with Ed25519 signature verification.
+- PUT /agents/:agentId/update
+  - Purpose: Update agent metadata with Ed25519 signature verification using UUID.
   - Authentication: None (strict rate limiting).
   - Rate limit: Auth limiter (20 per 15 minutes).
   - Path parameter:
-    - pubkey
+    - agentId (UUID)
   - Request body:
     - signature (required, base58-encoded Ed25519)
     - timestamp (required, number)
     - name, tokenMint, capabilities[], creatorX, description (optional)
   - Validation:
-    - signature format and Ed25519 verification against message "AGENTID-UPDATE:{pubkey}:{timestamp}".
+    - signature format and Ed25519 verification against message "AGENTID-UPDATE:{agentId}:{timestamp}".
     - timestamp within ±5 minutes (with small future tolerance).
     - Agent must exist.
   - Responses:
@@ -323,12 +325,12 @@ S-->>C : "Response"
 - [transform.js:43-55](file://backend/src/utils/transform.js#L43-L55)
 
 ### Attestations and Flagging Endpoints
-- POST /agents/:pubkey/attest
-  - Purpose: Record action success/failure and optionally refresh reputation.
+- POST /agents/:agentId/attest
+  - Purpose: Record action success/failure and optionally refresh reputation using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Path parameter:
-    - pubkey
+    - agentId (UUID)
   - Request body:
     - success (required, boolean)
     - action (optional, string)
@@ -336,20 +338,20 @@ S-->>C : "Response"
     - Increments total and successful/failed counters.
     - On success, attempts to refresh and store BAGS score.
   - Responses:
-    - 200 OK: { pubkey, success, action, totalActions, successfulActions, failedActions, bagsScore }
+    - 200 OK: { agentId, pubkey, success, action, totalActions, successfulActions, failedActions, bagsScore }
     - 404 Not Found: agent not found
   - Example curl:
     - [curl snippet path:25-72](file://backend/src/routes/attestations.js#L25-L72)
 
-- POST /agents/:pubkey/flag
-  - Purpose: Flag suspicious behavior with comprehensive Ed25519 cryptographic authentication.
+- POST /agents/:agentId/flag
+  - Purpose: Flag suspicious behavior with comprehensive Ed25519 cryptographic authentication using UUID.
   - Authentication: Ed25519 signature-based authentication (strict rate limiting).
   - Rate limit: Auth limiter (20 requests per 15 minutes) - **Enhanced** from default tier.
   - Path parameter:
-    - pubkey
+    - agentId (UUID)
   - Request body:
     - reporterPubkey (required, valid Solana address)
-    - signature (required, base58-encoded Ed25519 signature)
+    - signature (required, base58-encoded Ed25519)
     - timestamp (required, number)
     - reason (required, non-empty string)
     - evidence (optional)
@@ -359,14 +361,14 @@ S-->>C : "Response"
     - timestamp: within ±5 minutes (300,000 ms) of current time
     - reason: non-empty string
   - Signature verification:
-    - Constructs message: "AGENTID-FLAG:{pubkey}:{reporterPubkey}:{timestamp}"
+    - Constructs message: "AGENTID-FLAG:{agentId}:{reporterPubkey}:{timestamp}"
     - Verifies Ed25519 signature against reporterPubkey
     - Validates signature format and encoding
   - Behavior:
     - Creates flag record with cryptographic proof of ownership
     - If unresolved flags ≥ 3 and status != flagged, updates agent status to flagged
   - Responses:
-    - 201 Created: { flag, unresolved_flags, auto_flagged }
+    - 201 Created: { flag, agentId, unresolved_flags, auto_flagged }
     - 400 Bad Request: missing fields, invalid signature format, timestamp outside window
     - 401 Unauthorized: invalid reporter signature
     - 404 Not Found: agent not found
@@ -377,22 +379,22 @@ S-->>C : "Response"
   - Example curl:
     - [curl snippet path:78-127](file://backend/src/routes/attestations.js#L78-L127)
 
-- GET /agents/:pubkey/attestations
-  - Purpose: Retrieve agent action statistics.
+- GET /agents/:agentId/attestations
+  - Purpose: Retrieve agent action statistics using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Responses:
-    - 200 OK: { pubkey, totalActions, successfulActions, failedActions, bagsScore }
+    - 200 OK: { agentId, pubkey, totalActions, successfulActions, failedActions, bagsScore }
     - 404 Not Found: agent not found
   - Example curl:
     - [curl snippet path:133-156](file://backend/src/routes/attestations.js#L133-L156)
 
-- GET /agents/:pubkey/flags
-  - Purpose: Retrieve flags filed against an agent.
+- GET /agents/:agentId/flags
+  - Purpose: Retrieve flags filed against an agent using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Responses:
-    - 200 OK: { pubkey, flags: [...], count }
+    - 200 OK: { agentId, pubkey, flags: [...], count }
     - 404 Not Found: agent not found
   - Example curl:
     - [curl snippet path:162-185](file://backend/src/routes/attestations.js#L162-L185)
@@ -404,13 +406,13 @@ S-->>C : "Response"
 - [queries.js:267-305](file://backend/src/models/queries.js#L267-L305)
 
 ### Widget Endpoint
-- GET /widget/:pubkey
-  - Purpose: Return embeddable HTML widget for an agent.
+- GET /widget/:agentId
+  - Purpose: Return embeddable HTML widget for an agent using UUID.
   - Authentication: None.
   - Rate limit: Default limiter (100 per 15 minutes).
   - Responses:
     - 200 OK: text/html (widget HTML)
-    - 404 Not Found: simple HTML error page with pubkey
+    - 404 Not Found: simple HTML error page with agentId
   - Security:
     - HTML is escaped to prevent XSS.
   - Example curl:
@@ -421,7 +423,7 @@ S-->>C : "Response"
 
 ### PKI Challenge-Response Message Format and Signature Verification
 - Challenge issuance:
-  - Construct challenge string: "AGENTID-VERIFY:{pubkey}:{nonce}:{timestamp}"
+  - Construct challenge string: "AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}"
   - Store with expiration and completion status.
   - Return base58-encoded challenge and nonce.
 - Response verification:
@@ -436,18 +438,18 @@ participant Client as "Client"
 participant Verify as "Verify Route"
 participant Challenge as "PKI Challenge Service"
 participant DB as "Queries"
-Client->>Verify : "POST /verify/challenge {pubkey}"
-Verify->>Challenge : "issueChallenge(pubkey)"
+Client->>Verify : "POST /challenge {agentId}"
+Verify->>Challenge : "issueChallenge(agentId, pubkey)"
 Challenge->>DB : "createVerification(...)"
 Challenge-->>Verify : "{ nonce, challenge (base58), expiresIn }"
 Verify-->>Client : "200 OK"
-Client->>Verify : "POST /verify/response {pubkey, nonce, signature}"
-Verify->>Challenge : "verifyChallenge(pubkey, nonce, signature)"
-Challenge->>DB : "getVerification(pubkey, nonce)"
+Client->>Verify : "POST /response {agentId, nonce, signature}"
+Verify->>Challenge : "verifyChallenge(agentId, pubkey, nonce, signature)"
+Challenge->>DB : "getVerification(agentId, nonce)"
 Challenge->>Challenge : "verify Ed25519 signature"
 Challenge->>DB : "completeVerification(nonce)"
-Challenge->>DB : "updateLastVerified(pubkey)"
-Challenge-->>Verify : "{ verified, pubkey, timestamp }"
+Challenge->>DB : "updateLastVerified(agentId)"
+Challenge-->>Verify : "{ verified, agentId, timestamp }"
 Verify-->>Client : "200 OK"
 ```
 
@@ -465,10 +467,10 @@ Verify-->>Client : "200 OK"
 
 - Default rate limiter: 100 requests per 15 minutes per IP
   - Used for read operations (GET requests)
-  - Applied to endpoints: /agents, /badge, /reputation, /discover, /agents/:pubkey/attestations, /agents/:pubkey/flags
+  - Applied to endpoints: /agents, /badge/:agentId, /reputation/:agentId, /discover, /agents/:agentId/attestations, /agents/:agentId/flags
 - Auth rate limiter: 20 requests per 15 minutes per IP
   - Used for write operations and authentication
-  - Applied to endpoints: /register, /verify/challenge, /verify/response, /agents/:pubkey/update, /agents/:pubkey/flag
+  - Applied to endpoints: /register, /challenge, /response, /agents/:agentId/update, /agents/:agentId/flag
 - Rate limit headers:
   - Standard headers: RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset
   - Legacy headers: Disabled (legacyHeaders: false)
@@ -490,7 +492,7 @@ Verify-->>Client : "200 OK"
   - Requires reporterPubkey (valid Solana address)
   - Requires signature (base58-encoded Ed25519)
   - Requires timestamp (within ±5 minutes window)
-  - Message format: "AGENTID-FLAG:{pubkey}:{reporterPubkey}:{timestamp}"
+  - Message format: "AGENTID-FLAG:{agentId}:{reporterPubkey}:{timestamp}"
 - Security benefits:
   - Prevents anonymous bulk flagging
   - Ensures reporter control over reported actions
@@ -574,6 +576,7 @@ Widget["widget.js"] --> DB
   - Ensure messages include the nonce for registration.
   - Verify Ed25519 signatures are base58-encoded and match the expected challenge format.
   - For flag submissions, ensure reporterPubkey is a valid Solana address.
+  - All endpoints now use UUID parameters instead of public keys.
 - External services:
   - BAGS and SAID endpoints may be temporarily unavailable; handle gracefully with retries and fallbacks.
 
@@ -584,31 +587,31 @@ Widget["widget.js"] --> DB
 - [agents.js:161-176](file://backend/src/routes/agents.js#L161-L176)
 
 ## Conclusion
-The AgentID backend provides a comprehensive REST API for identity registration, verification, trust scoring, discovery, and widget embedding. Enhanced Ed25519 cryptographic authentication for flag submissions ensures robust security against abuse. Strict rate limiting, comprehensive signature verification, and external integrations ensure reliability and security. The modular route architecture and caching strategies support scalability and performance.
+The AgentID backend provides a comprehensive REST API for identity registration, verification, trust scoring, discovery, and widget embedding. The API has been refactored to use UUID-based agent identification throughout, replacing the previous pubkey-based parameter system. Enhanced Ed25519 cryptographic authentication for flag submissions ensures robust security against abuse. Strict rate limiting, comprehensive signature verification, and external integrations ensure reliability and security. The modular route architecture and caching strategies support scalability and performance.
 
 ## Appendices
 
 ### API Summary Table
 - Authentication and Registration
   - POST /register: Registration with Bags signature and optional SAID binding.
-  - POST /verify/challenge: Issue PKI challenge.
-  - POST /verify/response: Verify challenge response.
+  - POST /challenge: Issue PKI challenge using agent UUID.
+  - POST /response: Verify challenge response using agent UUID.
 - Trust and Reputation
-  - GET /reputation/:pubkey: Full reputation breakdown.
-  - GET /badge/:pubkey: Trust badge JSON.
-  - GET /badge/:pubkey/svg: Trust badge SVG.
+  - GET /reputation/:agentId: Full reputation breakdown.
+  - GET /badge/:agentId: Trust badge JSON.
+  - GET /badge/:agentId/svg: Trust badge SVG.
 - Discovery and Registry
   - GET /agents: List agents with filters.
-  - GET /agents/:pubkey: Agent detail with reputation.
+  - GET /agents/:agentId: Agent detail with reputation.
   - GET /discover: Capability-based discovery.
-  - PUT /agents/:pubkey/update: Update metadata with Ed25519 signature.
+  - PUT /agents/:agentId/update: Update metadata with Ed25519 signature.
 - Attestations and Flagging
-  - POST /agents/:pubkey/attest: Record action outcome.
-  - POST /agents/:pubkey/flag: Flag suspicious behavior with Ed25519 authentication.
-  - GET /agents/:pubkey/attestations: Action statistics.
-  - GET /agents/:pubkey/flags: Flags against agent.
+  - POST /agents/:agentId/attest: Record action outcome.
+  - POST /agents/:agentId/flag: Flag suspicious behavior with Ed25519 authentication.
+  - GET /agents/:agentId/attestations: Action statistics.
+  - GET /agents/:agentId/flags: Flags against agent.
 - Widget
-  - GET /widget/:pubkey: Embeddable HTML widget.
+  - GET /widget/:agentId: Embeddable HTML widget.
 
 **Section sources**
 - [register.js:59-153](file://backend/src/routes/register.js#L59-L153)
@@ -641,6 +644,7 @@ The AgentID backend provides a comprehensive REST API for identity registration,
 - XSS prevention: HTML escaping in widget responses.
 - Cryptographic authentication: Comprehensive Ed25519 signature verification for flag submissions.
 - Rate limiting: Tiered rate limiting with strict authentication limits.
+- Parameter system: All endpoints now use UUID-based agent identification.
 
 **Section sources**
 - [server.js:22-28](file://backend/server.js#L22-L28)
@@ -670,11 +674,11 @@ participant Reporter as "Reporter Client"
 participant API as "AgentID API"
 participant Crypto as "Ed25519 Crypto"
 participant DB as "Database"
-Reporter->>API : "POST /agents/ : pubkey/flag"
+Reporter->>API : "POST /agents/ : agentId/flag"
 API->>Crypto : "Validate reporterPubkey format"
 Crypto-->>API : "Valid Solana address"
 API->>Crypto : "Verify signature against message"
-Crypto->>Crypto : "Construct message : AGENTID-FLAG : {pubkey} : {reporterPubkey} : {timestamp}"
+Crypto->>Crypto : "Construct message : AGENTID-FLAG : {agentId} : {reporterPubkey} : {timestamp}"
 Crypto->>Crypto : "Decode base58 signature and pubkey"
 Crypto->>Crypto : "Verify Ed25519 signature"
 Crypto-->>API : "Signature valid/invalid"
@@ -686,3 +690,22 @@ API-->>Reporter : "201 Created with flag data"
 **Diagram sources**
 - [attestations.js:126-147](file://backend/src/routes/attestations.js#L126-L147)
 - [transform.js:87-93](file://backend/src/utils/transform.js#L87-L93)
+
+### Client-Side API Usage
+**Updated** Client-side API usage reflects UUID-based parameter system
+
+The frontend API library has been updated to use UUID-based parameters consistently:
+
+- `getAgent(agentId)` - GET `/agents/:agentId`
+- `getBadge(agentId)` - GET `/badge/:agentId`
+- `getReputation(agentId)` - GET `/reputation/:agentId`
+- `attestAgent(agentId, data)` - POST `/agents/:agentId/attest`
+- `flagAgent(agentId, data)` - POST `/agents/:agentId/flag`
+- `updateAgent(agentId, data, signature, timestamp)` - PUT `/agents/:agentId/update`
+- `getAttestations(agentId)` - GET `/agents/:agentId/attestations`
+- `getFlags(agentId)` - GET `/agents/:agentId/flags`
+- `getWidgetHtml(agentId)` - GET `/widget/:agentId`
+- `getBadgeSvg(agentId)` - GET `/badge/:agentId/svg`
+
+**Section sources**
+- [api.js:47-144](file://frontend/src/lib/api.js#L47-L144)

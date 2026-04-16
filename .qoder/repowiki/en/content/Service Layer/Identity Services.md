@@ -19,6 +19,14 @@
 - [package.json](file://backend/package.json)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated database query layer documentation to reflect complete UUID-based operation system
+- Added documentation for new backward compatibility functions (`getAgentByPubkey`, `getAgentsByOwner`)
+- Updated data model documentation to show UUID primary keys and foreign key relationships
+- Revised identity lifecycle management to reflect agent_id usage in internal operations
+- Updated service integration patterns to show pubkey vs agent_id usage differences
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -32,15 +40,15 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the AgentID identity services with a focus on SAID protocol integration and identity binding. It explains how agents are registered, bound to SAID, and how trust scores are retrieved and integrated into the BAGS reputation computation. It also documents the identity lifecycle, data transformation patterns, error handling, configuration requirements, and performance considerations including caching.
+This document describes the AgentID identity services with a focus on SAID protocol integration and identity binding. The system has been updated to use a complete UUID-based operation system internally while maintaining backward compatibility for external API endpoints. It explains how agents are registered, bound to SAID, and how trust scores are retrieved and integrated into the BAGS reputation computation. It also documents the identity lifecycle, data transformation patterns, error handling, configuration requirements, and performance considerations including caching.
 
 ## Project Structure
-The backend is organized around layered concerns:
+The backend is organized around layered concerns with a complete UUID-based internal operation system:
 - Configuration and environment variables
 - Middleware for security, rate limiting, and error handling
-- Models for database and Redis
+- Models for database and Redis with UUID-based query functions
 - Services for external integrations (SAID, BAGS auth, reputation)
-- Routes for API endpoints
+- Routes for API endpoints with backward compatibility
 - Utilities for data transformation
 
 ```mermaid
@@ -63,7 +71,7 @@ BR["BAGS Reputation<br/>services/bagsReputation.js"]
 end
 subgraph "Models"
 DB["PostgreSQL Pool<br/>models/db.js"]
-Q["Queries<br/>models/queries.js"]
+Q["UUID-based Queries<br/>models/queries.js"]
 RD["Redis Client<br/>models/redis.js"]
 MIG["Migrations<br/>models/migrate.js"]
 end
@@ -95,16 +103,16 @@ BR --> RD
 - [server.js:1-85](file://backend/server.js#L1-L85)
 - [middleware/rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [middleware/errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
-- [routes/register.js:1-156](file://backend/src/routes/register.js#L1-L156)
-- [routes/agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [routes/register.js:1-162](file://backend/src/routes/register.js#L1-L162)
+- [routes/agents.js:1-277](file://backend/src/routes/agents.js#L1-L277)
 - [services/saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
 - [services/bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
 - [services/bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
-- [models/db.js:1-45](file://backend/src/models/db.js#L1-L45)
-- [models/queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [models/db.js:1-71](file://backend/src/models/db.js#L1-L71)
+- [models/queries.js:1-443](file://backend/src/models/queries.js#L1-L443)
 - [models/redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
-- [models/migrate.js:1-100](file://backend/src/models/migrate.js#L1-L100)
-- [utils/transform.js:1-89](file://backend/src/utils/transform.js#L1-L89)
+- [models/migrate.js:1-101](file://backend/src/models/migrate.js#L1-L101)
+- [utils/transform.js:1-125](file://backend/src/utils/transform.js#L1-L125)
 - [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
 
 **Section sources**
@@ -112,25 +120,24 @@ BR --> RD
 - [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
 
 ## Core Components
-- SAID Binding Service: Integrates with the SAID Identity Gateway to register agents and fetch trust scores.
-- BAGS Auth Verifier: Initializes and completes BAGS authentication challenges and verifies Ed25519 signatures.
-- BAGS Reputation Service: Computes a composite reputation score using SAID trust and internal metrics.
-- Identity Routes: Registration and agent management endpoints with signature verification and rate limits.
-- Data Access Layer: Parameterized queries, migrations, and Redis caching utilities.
-- Transformation Utilities: Normalize database field names to camelCase for API responses.
+- **UUID-based Data Access Layer**: Complete transition to UUID primary keys with parameterized queries, migrations, and Redis caching utilities.
+- **SAID Binding Service**: Integrates with the SAID Identity Gateway to register agents and fetch trust scores using pubkeys.
+- **BAGS Auth Verifier**: Initializes and completes BAGS authentication challenges and verifies Ed25519 signatures.
+- **BAGS Reputation Service**: Computes a composite reputation score using SAID trust and internal metrics.
+- **Identity Routes**: Registration and agent management endpoints with signature verification, rate limits, and backward compatibility.
+- **Transformation Utilities**: Normalize database field names to camelCase for API responses.
 
 **Section sources**
+- [models/queries.js:1-443](file://backend/src/models/queries.js#L1-L443)
 - [services/saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
 - [services/bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
 - [services/bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
-- [routes/register.js:1-156](file://backend/src/routes/register.js#L1-L156)
-- [routes/agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
-- [models/queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
-- [models/redis.js:1-94](file://backend/src/models/redis.js#L1-L94)
-- [utils/transform.js:1-89](file://backend/src/utils/transform.js#L1-L89)
+- [routes/register.js:1-162](file://backend/src/routes/register.js#L1-L162)
+- [routes/agents.js:1-277](file://backend/src/routes/agents.js#L1-L277)
+- [utils/transform.js:1-125](file://backend/src/utils/transform.js#L1-L125)
 
 ## Architecture Overview
-The system orchestrates identity registration and reputation computation across local storage, external APIs, and caching.
+The system orchestrates identity registration and reputation computation across local storage, external APIs, and caching with a complete UUID-based internal operation system.
 
 ```mermaid
 sequenceDiagram
@@ -138,31 +145,70 @@ participant Client as "Client"
 participant Reg as "Register Route<br/>routes/register.js"
 participant Ver as "BAGS Verifier<br/>services/bagsAuthVerifier.js"
 participant SAID as "SAID Binding<br/>services/saidBinding.js"
-participant DB as "Queries<br/>models/queries.js"
+participant DB as "UUID Queries<br/>models/queries.js"
 participant RESP as "Reputation Service<br/>services/bagsReputation.js"
 Client->>Reg : POST /register (pubkey, name, signature, message, nonce, capabilities, tokenMint)
 Reg->>Ver : verifyBagsSignature(message, signature, pubkey)
 Ver-->>Reg : validity
-Reg->>DB : createAgent(...)
-DB-->>Reg : agent row
+Reg->>DB : createAgent({pubkey, name, ...})
+DB-->>Reg : agent row with agent_id
 Reg->>SAID : registerWithSAID(...)
 SAID-->>Reg : registration result or null
-Reg-->>Client : {agent, said : status}
-Client->>RESP : GET /reputation/ : pubkey
-RESP->>DB : getAgent(pubkey)
+Reg-->>Client : {agentId, agent, said : status}
+Client->>RESP : GET /agents/ : agentId
+RESP->>DB : getAgent(agent_id)
 RESP->>SAID : getSAIDTrustScore(pubkey)
 SAID-->>RESP : {score, label}
 RESP-->>Client : {score, label, breakdown}
 ```
 
 **Diagram sources**
-- [routes/register.js:59-153](file://backend/src/routes/register.js#L59-L153)
+- [routes/register.js:59-159](file://backend/src/routes/register.js#L59-L159)
 - [services/bagsAuthVerifier.js:44-57](file://backend/src/services/bagsAuthVerifier.js#L44-L57)
 - [models/queries.js:17-29](file://backend/src/models/queries.js#L17-L29)
 - [services/saidBinding.js:21-54](file://backend/src/services/saidBinding.js#L21-L54)
 - [services/bagsReputation.js:16-122](file://backend/src/services/bagsReputation.js#L16-L122)
 
 ## Detailed Component Analysis
+
+### UUID-based Data Access Layer
+**Updated** The data access layer has been completely restructured to use UUID-based operations internally while maintaining backward compatibility.
+
+Responsibilities:
+- **Primary Key Operations**: All internal queries use `agent_id` UUID as the primary identifier
+- **Backward Compatibility**: Functions like `getAgentByPubkey` enable legacy pubkey-based operations
+- **Multi-agent Support**: `getAgentsByOwner` handles wallets with multiple associated agents
+- **Parameterized Queries**: All database operations use parameterized queries for security
+- **Foreign Key Relationships**: Proper UUID foreign key constraints in verification and flag tables
+
+Key functions:
+- `getAgent(agentId)`: Retrieve agent by UUID (internal primary key)
+- `getAgentByPubkey(pubkey)`: Backward compatibility for pubkey-based lookups
+- `getAgentsByOwner(pubkey)`: Multi-agent wallet support
+- `updateAgent(agentId, fields)`: Dynamic field updates using UUID
+- `createAgent(data)`: Insert new agent with automatic UUID generation
+
+```mermaid
+flowchart TD
+Start(["Agent Operation"]) --> Check{"Operation Type?"}
+Check --> |"Internal UUID Ops"| UUIDOps["Use agent_id in WHERE clause"]
+Check --> |"Legacy Pubkey Ops"| PubkeyOps["Use getAgentByPubkey(pubkey)"]
+Check --> |"Multi-agent"| OwnerOps["Use getAgentsByOwner(pubkey)"]
+UUIDOps --> DBQuery["Database Query with agent_id"]
+PubkeyOps --> LegacyLookup["Legacy Lookup Path"]
+OwnerOps --> MultiAgent["Multi-agent Wallet Query"]
+DBQuery --> Result["Return Agent Data"]
+LegacyLookup --> Result
+MultiAgent --> Result
+```
+
+**Diagram sources**
+- [models/queries.js:36-75](file://backend/src/models/queries.js#L36-L75)
+- [models/queries.js:46-61](file://backend/src/models/queries.js#L46-L61)
+
+**Section sources**
+- [models/queries.js:1-443](file://backend/src/models/queries.js#L1-L443)
+- [models/migrate.js:10-66](file://backend/src/models/migrate.js#L10-L66)
 
 ### SAID Binding Service
 Responsibilities:
@@ -229,11 +275,11 @@ Ver-->>Client : apiKeyId
 Responsibilities:
 - Compute a composite reputation score from multiple factors.
 - Integrate SAID trust score into the reputation calculation.
-- Persist the computed score back to the database.
+- Persist the computed score back to the database using UUID operations.
 
 ```mermaid
 flowchart TD
-Start(["computeBagsScore(pubkey)"]) --> Load["Load agent from DB"]
+Start(["computeBagsScore(agentId)"]) --> Load["Load agent from DB using agent_id"]
 Load --> Fees["Fetch token fees analytics"]
 Fees --> Success["Compute success rate from actions"]
 Success --> Age["Compute registration age score"]
@@ -253,9 +299,11 @@ Label --> Return["Return {score, label, breakdown, saidScore}"]
 - [models/queries.js:17-29](file://backend/src/models/queries.js#L17-L29)
 
 ### Identity Lifecycle Management
-End-to-end flow for registration and updates:
-- Registration validates inputs, verifies BAGS signature, optionally binds to SAID, and persists agent records.
-- Updates enforce signature verification and timestamp windows, then apply allowed field updates.
+**Updated** End-to-end flow for registration and updates with UUID-based internal operations:
+
+- Registration validates inputs, verifies BAGS signature, optionally binds to SAID, and persists agent records with automatic UUID generation.
+- Updates enforce signature verification and timestamp windows, then apply allowed field updates using UUID operations.
+- Multi-agent wallet scenarios supported through owner-based queries.
 
 ```mermaid
 sequenceDiagram
@@ -263,51 +311,55 @@ participant Client as "Client"
 participant Reg as "Register Route"
 participant Ver as "BAGS Verifier"
 participant SAID as "SAID Binding"
-participant DB as "Queries"
+participant DB as "UUID Queries"
 Client->>Reg : POST /register
 Reg->>Ver : verifyBagsSignature(...)
 Ver-->>Reg : valid?
-Reg->>DB : createAgent(...)
-DB-->>Reg : agent
+Reg->>DB : createAgent({pubkey, name, ...})
+DB-->>Reg : agent with agent_id
 Reg->>SAID : registerWithSAID(...)
 SAID-->>Reg : result or null
-Reg-->>Client : {agent, said : status}
-Client->>Reg : PUT /agents/ : pubkey/update
+Reg-->>Client : {agentId, agent, said : status}
+Client->>Reg : PUT /agents/ : agentId/update
+Reg->>DB : getAgent(agentId)
+DB-->>Reg : agent with pubkey
 Reg->>Reg : verify Ed25519 signature and timestamp
-Reg->>DB : updateAgent(pubkey, fields)
+Reg->>DB : updateAgent(agentId, fields)
 DB-->>Reg : updated agent
 Reg-->>Client : {agent}
 ```
 
 **Diagram sources**
-- [routes/register.js:59-153](file://backend/src/routes/register.js#L59-L153)
-- [routes/agents.js:120-248](file://backend/src/routes/agents.js#L120-L248)
+- [routes/register.js:59-159](file://backend/src/routes/register.js#L59-L159)
+- [routes/agents.js:144-274](file://backend/src/routes/agents.js#L144-L274)
 - [services/bagsAuthVerifier.js:44-57](file://backend/src/services/bagsAuthVerifier.js#L44-L57)
 - [services/saidBinding.js:21-54](file://backend/src/services/saidBinding.js#L21-L54)
 - [models/queries.js:47-73](file://backend/src/models/queries.js#L47-L73)
 
 **Section sources**
-- [routes/register.js:1-156](file://backend/src/routes/register.js#L1-L156)
-- [routes/agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
-- [models/queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [routes/register.js:1-162](file://backend/src/routes/register.js#L1-L162)
+- [routes/agents.js:1-277](file://backend/src/routes/agents.js#L1-L277)
+- [models/queries.js:1-443](file://backend/src/models/queries.js#L1-L443)
 
 ### Data Transformation Patterns
 - Database rows use snake_case; API responses normalize to camelCase.
 - capability_set is mapped to capabilities for frontend compatibility.
+- agent_id is exposed as agentId in API responses for consistency.
 - HTML escaping utilities are available for safe rendering.
 
 ```mermaid
 flowchart TD
 Row["Database Row (snake_case)"] --> Snake["snakeToCamel()"]
 Snake --> Map["capabilitySet -> capabilities"]
-Map --> API["Transformed Agent (camelCase)"]
+Map --> AgentId["agent_id -> agentId"]
+AgentId --> API["Transformed Agent (camelCase)"]
 ```
 
 **Diagram sources**
-- [utils/transform.js:43-55](file://backend/src/utils/transform.js#L43-L55)
+- [utils/transform.js:44-61](file://backend/src/utils/transform.js#L44-L61)
 
 **Section sources**
-- [utils/transform.js:1-89](file://backend/src/utils/transform.js#L1-L89)
+- [utils/transform.js:1-125](file://backend/src/utils/transform.js#L1-L125)
 
 ### Error Handling and Rate Limiting
 - Centralized error handler logs structured errors and returns JSON responses.
@@ -383,6 +435,7 @@ Recommendations:
 - Apply circuit-breaker patterns around external APIs if latency increases.
 - Batch or debounce discovery requests when feasible.
 - Monitor rate-limit hits and adjust thresholds per deployment.
+- **Updated** Leverage UUID primary keys for optimal database performance and foreign key relationships.
 
 **Section sources**
 - [models/db.js:10-18](file://backend/src/models/db.js#L10-L18)
@@ -401,11 +454,13 @@ Common issues and resolutions:
 - Signature verification fails: Validate base58 encoding and ensure the message includes the nonce.
 - Rate limit exceeded: Adjust client-side retry delays or contact support for higher quotas.
 - Redis connection errors: The client logs and continues; monitor connectivity and retry strategy.
+- **Updated** UUID conversion issues: Ensure agent_id is properly handled in external API responses and transformations.
 
 Operational checks:
 - Health endpoint: GET /health to confirm service responsiveness.
 - Database connectivity: Verify pool configuration and SSL settings in production.
 - Redis health: Confirm connect/reconnect logs and cache operations.
+- **Updated** Migration status: Verify UUID-based schema is properly migrated and indexed.
 
 **Section sources**
 - [server.js:3-10](file://backend/server.js#L3-L10)
@@ -416,7 +471,7 @@ Operational checks:
 - [models/redis.js:22-34](file://backend/src/models/redis.js#L22-L34)
 
 ## Conclusion
-The AgentID identity services integrate tightly with SAID and BAGS to provide secure, verifiable agent identities with reputation scoring. The design emphasizes resilience through graceful fallbacks, strict input validation, and robust error handling. With proper configuration and caching strategies, the system supports scalable identity lifecycle management and discovery.
+The AgentID identity services integrate tightly with SAID and BAGS to provide secure, verifiable agent identities with reputation scoring. The system has been enhanced with a complete UUID-based operation system that provides improved scalability, security, and maintainability while preserving backward compatibility. The design emphasizes resilience through graceful fallbacks, strict input validation, and robust error handling. With proper configuration and caching strategies, the system supports scalable identity lifecycle management and discovery.
 
 ## Appendices
 
@@ -439,35 +494,41 @@ Optional:
 - [models/db.js:10-18](file://backend/src/models/db.js#L10-L18)
 
 ### Identity Binding Workflows
-- Registration:
+**Updated** Identity binding workflows with UUID-based internal operations:
+
+- **Registration**:
   - Client sends pubkey, name, signature, message, nonce, capabilities, tokenMint.
   - Server verifies nonce presence, BAGS signature, and uniqueness.
-  - Server creates agent record and attempts SAID registration (non-blocking).
-  - Response includes agent data and SAID status.
+  - Server creates agent record with automatic UUID generation and attempts SAID registration (non-blocking).
+  - Response includes agentId, agent data, and SAID status.
 
-- Status Checking:
-  - Use GET /agents/:pubkey to retrieve agent details and reputation.
-  - Use GET /reputation/:pubkey to fetch computed BAGS score and breakdown.
+- **Status Checking**:
+  - Use GET /agents/:agentId to retrieve agent details and reputation using UUID.
+  - Use GET /agents/owner/:pubkey to retrieve all agents owned by a wallet address.
+  - Use GET /reputation/:agentId to fetch computed BAGS score and breakdown.
 
-- Discovery:
+- **Discovery**:
   - Use GET /discover?capability={name} to list verified agents with matching capabilities.
+  - Multi-agent wallet scenarios supported through owner-based queries.
 
 **Section sources**
-- [routes/register.js:59-153](file://backend/src/routes/register.js#L59-L153)
-- [routes/agents.js:61-114](file://backend/src/routes/agents.js#L61-L114)
+- [routes/register.js:59-159](file://backend/src/routes/register.js#L59-L159)
+- [routes/agents.js:61-138](file://backend/src/routes/agents.js#L61-L138)
 - [services/saidBinding.js:94-112](file://backend/src/services/saidBinding.js#L94-L112)
 
 ### Data Model Overview
-Core tables and indexes:
-- agent_identities: stores agent metadata, capability sets, scores, and counters.
-- agent_verifications: challenge/nonce lifecycle for verification.
-- agent_flags: moderation reports and resolution tracking.
-- Indexes: status, bags_score, and flag-related composite indexes.
+**Updated** Core tables with UUID-based primary keys and foreign key relationships:
+
+- **agent_identities**: Stores agent metadata with UUID primary key, capability sets, scores, and counters.
+- **agent_verifications**: Challenge/nonce lifecycle for verification with UUID foreign key to agent_identities.
+- **agent_flags**: Moderation reports and resolution tracking with UUID foreign key to agent_identities.
+- **Indexes**: Optimized indexes on pubkey, status, bags_score, creator_wallet, and foreign key columns.
 
 ```mermaid
 erDiagram
 AGENT_IDENTITIES {
-varchar pubkey PK
+uuid agent_id PK
+varchar pubkey
 varchar name
 text description
 varchar token_mint
@@ -485,14 +546,12 @@ integer bags_score
 integer total_actions
 integer successful_actions
 integer failed_actions
-integer fee_claims_count
-decimal fee_claims_sol
-integer swaps_count
-integer launches_count
+decimal total_fees_earned
 }
 AGENT_VERIFICATIONS {
 serial id PK
-varchar pubkey FK
+uuid agent_id FK
+varchar pubkey
 varchar nonce UK
 text challenge
 timestamptz expires_at
@@ -501,7 +560,8 @@ timestamptz created_at
 }
 AGENT_FLAGS {
 serial id PK
-varchar pubkey FK
+uuid agent_id FK
+varchar pubkey
 varchar reporter_pubkey
 text reason
 jsonb evidence
@@ -513,4 +573,8 @@ AGENT_IDENTITIES ||--o{ AGENT_FLAGS : "reported"
 ```
 
 **Diagram sources**
-- [models/migrate.js:9-64](file://backend/src/models/migrate.js#L9-L64)
+- [models/migrate.js:10-66](file://backend/src/models/migrate.js#L10-L66)
+
+**Section sources**
+- [models/migrate.js:1-101](file://backend/src/models/migrate.js#L1-L101)
+- [models/queries.js:1-443](file://backend/src/models/queries.js#L1-L443)

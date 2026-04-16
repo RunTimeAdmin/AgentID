@@ -11,7 +11,15 @@
 - [transform.js](file://backend/src/utils/transform.js)
 - [rateLimit.js](file://backend/src/middleware/rateLimit.js)
 - [server.js](file://backend/server.js)
+- [pkiChallenge.test.js](file://backend/tests/pkiChallenge.test.js)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated challenge issuance and verification processes to reflect consistent Base58 encoding standardization
+- Enhanced verification logic documentation with proper Base58 decoding for signatures and public keys
+- Improved error handling documentation for encoding validation
+- Updated code examples to show Base58 encoding/decoding throughout the challenge-response cycle
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -27,6 +35,8 @@
 
 ## Introduction
 The PKI Challenge-Response system in AgentID provides cryptographic verification to prevent agent spoofing through Ed25519 digital signatures. This system implements a two-phase process: challenge issuance using cryptographically secure random nonces and timestamped messages, followed by signature verification using tweetnacl. The implementation includes replay attack prevention through nonce uniqueness, expiration handling, and single-use verification records stored in PostgreSQL.
+
+**Updated** The system now implements consistent Base58 encoding for all challenge data, enhancing transport efficiency and standardizing cryptographic operations across the entire verification workflow.
 
 ## Project Structure
 The PKI Challenge-Response system is organized across several key modules within the backend architecture:
@@ -62,14 +72,14 @@ Server --> Verify
 ```
 
 **Diagram sources**
-- [server.js:1-91](file://backend/server.js#L1-L91)
+- [server.js:1-104](file://backend/server.js#L1-L104)
 - [verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
-- [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
+- [pkiChallenge.js:1-109](file://backend/src/services/pkiChallenge.js#L1-L109)
 
 **Section sources**
-- [server.js:1-91](file://backend/server.js#L1-L91)
+- [server.js:1-104](file://backend/server.js#L1-L104)
 - [verify.js:1-121](file://backend/src/routes/verify.js#L1-L121)
-- [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
+- [pkiChallenge.js:1-109](file://backend/src/services/pkiChallenge.js#L1-L109)
 
 ## Core Components
 The PKI Challenge-Response system consists of four primary components working together to provide secure agent authentication:
@@ -77,16 +87,21 @@ The PKI Challenge-Response system consists of four primary components working to
 ### Challenge Issuance Service
 The challenge issuance service generates cryptographically secure challenges using the following process:
 - Generates UUID v4 nonces using `crypto.randomUUID()`
-- Creates timestamped challenge strings in the format `AGENTID-VERIFY:{pubkey}:{nonce}:{timestamp}`
-- Encodes challenges using Base58 for transport
+- Creates timestamped challenge strings in the format `AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}`
+- Encodes challenges using Base58 for transport and storage
 - Stores verification records with expiration timestamps
+
+**Updated** All challenge data is now consistently encoded in Base58 format, ensuring uniform handling across the entire system and improving transport efficiency.
 
 ### Verification Service
 The verification service validates challenge responses through:
 - Cryptographic signature verification using Ed25519 with tweetnacl
+- Base58 decoding of incoming signature, public key, and challenge data
 - Nonce uniqueness enforcement through database constraints
 - Expiration checking against stored timestamps
 - Single-use verification marking to prevent replay attacks
+
+**Updated** Enhanced verification logic now includes robust Base58 decoding with comprehensive error handling for malformed inputs.
 
 ### Database Schema
 The system uses PostgreSQL with specialized tables for verification records:
@@ -101,10 +116,10 @@ REST endpoints provide programmatic access to the challenge-response workflow:
 - Comprehensive input validation and error handling
 
 **Section sources**
-- [pkiChallenge.js:17-39](file://backend/src/services/pkiChallenge.js#L17-L39)
-- [pkiChallenge.js:49-96](file://backend/src/services/pkiChallenge.js#L49-L96)
-- [queries.js:208-256](file://backend/src/models/queries.js#L208-L256)
-- [verify.js:14-118](file://backend/src/routes/verify.js#L14-L118)
+- [pkiChallenge.js:18-44](file://backend/src/services/pkiChallenge.js#L18-L44)
+- [pkiChallenge.js:55-103](file://backend/src/services/pkiChallenge.js#L55-L103)
+- [queries.js:250-293](file://backend/src/models/queries.js#L250-L293)
+- [verify.js:17-118](file://backend/src/routes/verify.js#L17-L118)
 
 ## Architecture Overview
 The PKI Challenge-Response system follows a layered architecture with clear separation of concerns:
@@ -117,33 +132,35 @@ participant Service as "PKI Challenge Service"
 participant DB as "Database Layer"
 participant Crypto as "Cryptographic Libraries"
 Note over Client,API : Challenge Issuance Phase
-Client->>API : POST /verify/challenge {pubkey}
+Client->>API : POST /verify/challenge {agentId}
 API->>API : Validate input & agent existence
-API->>Service : issueChallenge(pubkey)
+API->>Service : issueChallenge(agentId, agent.pubkey)
 Service->>Crypto : Generate crypto.randomUUID()
 Service->>Service : Create challenge string
+Service->>Service : Base58 encode challenge
 Service->>DB : createVerification(record)
 DB-->>Service : Verification record
-Service-->>API : {challenge, nonce, expiresIn}
-API-->>Client : Challenge data
+Service-->>API : {nonce, challenge, expiresIn}
+API-->>Client : Challenge data (Base58-encoded)
 Note over Client,Crypto : Verification Phase
-Client->>API : POST /verify/response {pubkey, nonce, signature}
-API->>Service : verifyChallenge(pubkey, nonce, signature)
-Service->>DB : getVerification(pubkey, nonce)
+Client->>API : POST /verify/response {agentId, nonce, signature}
+API->>Service : verifyChallenge(agentId, agent.pubkey, nonce, signature)
+Service->>DB : getVerification(agentId, nonce)
 DB-->>Service : Verification record
 Service->>Service : Validate expiration
+Service->>Service : Base58 decode inputs
 Service->>Crypto : Verify Ed25519 signature
 Service->>DB : completeVerification(nonce)
-Service->>DB : updateLastVerified(pubkey)
-Service-->>API : {verified : true, pubkey, timestamp}
+Service->>DB : updateLastVerified(agentId)
+Service-->>API : {verified : true, agentId, pubkey, timestamp}
 API-->>Client : Verification result
 ```
 
 **Diagram sources**
-- [verify.js:18-51](file://backend/src/routes/verify.js#L18-L51)
-- [verify.js:57-118](file://backend/src/routes/verify.js#L57-L118)
-- [pkiChallenge.js:17-39](file://backend/src/services/pkiChallenge.js#L17-L39)
-- [pkiChallenge.js:49-96](file://backend/src/services/pkiChallenge.js#L49-L96)
+- [verify.js:17-46](file://backend/src/routes/verify.js#L17-L46)
+- [verify.js:52-118](file://backend/src/routes/verify.js#L52-L118)
+- [pkiChallenge.js:18-44](file://backend/src/services/pkiChallenge.js#L18-L44)
+- [pkiChallenge.js:55-103](file://backend/src/services/pkiChallenge.js#L55-L103)
 
 ## Detailed Component Analysis
 
@@ -152,37 +169,37 @@ The challenge issuance process implements multiple security measures to prevent 
 
 ```mermaid
 flowchart TD
-Start([Issue Challenge Request]) --> ValidatePubkey["Validate Solana Public Key"]
-ValidatePubkey --> CheckAgent["Check Agent Exists"]
-CheckAgent --> GenerateNonce["Generate UUID v4 Nonce"]
-GenerateTimestamp["Generate Timestamp"] --> BuildMessage["Build Challenge Message:<br/>AGENTID-VERIFY:{pubkey}:{nonce}:{timestamp}"]
+Start([Issue Challenge Request]) --> ValidateAgent["Validate Agent Exists"]
+ValidateAgent --> GenerateNonce["Generate UUID v4 Nonce"]
+GenerateTimestamp["Generate Timestamp"] --> BuildMessage["Build Challenge Message:<br/>AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}"]
 BuildMessage --> EncodeChallenge["Base58 Encode Challenge"]
 EncodeChallenge --> CalculateExpiry["Calculate Expiration:<br/>Current Time + Expiry Seconds"]
-CalculateExpiry --> StoreRecord["Store in agent_verifications:<br/>pubkey, nonce, challenge, expires_at"]
-StoreRecord --> ReturnChallenge["Return Challenge Data:<br/>{nonce, challenge, expiresIn}"]
-ValidatePubkey --> Error1["Return 400 Error"]
-CheckAgent --> Error2["Return 404 Error"]
+CalculateExpiry --> StoreRecord["Store in agent_verifications:<br/>agent_id, pubkey, nonce, challenge, expires_at"]
+StoreRecord --> ReturnChallenge["Return Challenge Data:<br/>{nonce, challenge, expiresIn}<br/>All Base58-encoded"]
+ValidateAgent --> Error1["Return 404 Error"]
 Error1 --> End([End])
-Error2 --> End
 ReturnChallenge --> End
 ```
 
 **Diagram sources**
-- [pkiChallenge.js:17-39](file://backend/src/services/pkiChallenge.js#L17-L39)
-- [verify.js:18-51](file://backend/src/routes/verify.js#L18-L51)
+- [pkiChallenge.js:18-44](file://backend/src/services/pkiChallenge.js#L18-L44)
+- [verify.js:17-46](file://backend/src/routes/verify.js#L17-L46)
 
 The challenge message format follows a strict specification:
-- **Format**: `AGENTID-VERIFY:{pubkey}:{nonce}:{timestamp}`
+- **Format**: `AGENTID-VERIFY:{agentId}:{pubkey}:{nonce}:{timestamp}`
 - **Components**: 
   - Fixed prefix `AGENTID-VERIFY`
+  - Agent's UUID (Base58 encoded)
   - Agent's public key (Base58 encoded)
   - Cryptographically secure nonce (UUID v4)
   - Unix timestamp in milliseconds
-- **Transport**: Base58 encoded for compact representation
+- **Transport**: Base58 encoded for compact representation and consistent handling
+
+**Updated** All challenge data is now consistently encoded in Base58 format, ensuring uniform processing and improved security through standardized encoding practices.
 
 **Section sources**
-- [pkiChallenge.js:17-39](file://backend/src/services/pkiChallenge.js#L17-L39)
-- [verify.js:18-51](file://backend/src/routes/verify.js#L18-L51)
+- [pkiChallenge.js:18-44](file://backend/src/services/pkiChallenge.js#L18-L44)
+- [verify.js:17-46](file://backend/src/routes/verify.js#L17-L46)
 
 ### Signature Verification Workflow
 The verification process ensures cryptographic integrity and prevents replay attacks:
@@ -195,7 +212,7 @@ RecordExists --> |No| NotFound["Return 404: Challenge Not Found"]
 RecordExists --> |Yes| CheckExpiry["Check Expiration"]
 CheckExpiry --> Expired{"Expired?"}
 Expired --> |Yes| ExpiredError["Return 401: Challenge Expired"]
-Expired --> |No| DecodeInputs["Decode Base58 Inputs:<br/>signature, pubkey, message"]
+Expired --> |No| DecodeInputs["Decode Base58 Inputs:<br/>signature, pubkey, challenge"]
 DecodeInputs --> VerifySignature["Verify Ed25519 Signature:<br/>nacl.sign.detached.verify()"]
 VerifySignature --> ValidSig{"Valid Signature?"}
 ValidSig --> |No| InvalidSig["Return 401: Invalid Signature"]
@@ -209,12 +226,14 @@ Success --> VerifyEnd
 ```
 
 **Diagram sources**
-- [pkiChallenge.js:49-96](file://backend/src/services/pkiChallenge.js#L49-L96)
-- [verify.js:57-118](file://backend/src/routes/verify.js#L57-L118)
+- [pkiChallenge.js:55-103](file://backend/src/services/pkiChallenge.js#L55-L103)
+- [verify.js:52-118](file://backend/src/routes/verify.js#L52-L118)
+
+**Updated** The verification workflow now includes comprehensive Base58 decoding with robust error handling for malformed inputs, ensuring consistent processing of all cryptographic data.
 
 **Section sources**
-- [pkiChallenge.js:49-96](file://backend/src/services/pkiChallenge.js#L49-L96)
-- [verify.js:57-118](file://backend/src/routes/verify.js#L57-L118)
+- [pkiChallenge.js:55-103](file://backend/src/services/pkiChallenge.js#L55-L103)
+- [verify.js:52-118](file://backend/src/routes/verify.js#L52-L118)
 
 ### Database Storage and Schema Design
 The system uses PostgreSQL with carefully designed constraints for security and performance:
@@ -222,32 +241,23 @@ The system uses PostgreSQL with carefully designed constraints for security and 
 ```mermaid
 erDiagram
 AGENT_IDENTITIES {
-varchar pubkey PK
+uuid agent_id PK
+varchar pubkey
 varchar name
 text description
 varchar token_mint
-varchar bags_api_key_id
-boolean said_registered
-integer said_trust_score
-jsonb capability_set
 varchar creator_x
 varchar creator_wallet
 timestamptz registered_at
 timestamptz last_verified
 varchar status
-text flag_reason
 integer bags_score
-integer total_actions
-integer successful_actions
-integer failed_actions
-integer fee_claims_count
-decimal fee_claims_sol
-integer swaps_count
-integer launches_count
+jsonb capability_set
 }
 AGENT_VERIFICATIONS {
 serial id PK
-varchar pubkey FK
+uuid agent_id FK
+varchar pubkey
 varchar nonce UK
 text challenge
 timestamptz expires_at
@@ -256,7 +266,8 @@ timestamptz created_at
 }
 AGENT_FLAGS {
 serial id PK
-varchar pubkey FK
+uuid agent_id FK
+varchar pubkey
 varchar reporter_pubkey
 text reason
 jsonb evidence
@@ -268,7 +279,7 @@ AGENT_IDENTITIES ||--o{ AGENT_FLAGS : "has"
 ```
 
 **Diagram sources**
-- [migrate.js:9-65](file://backend/src/models/migrate.js#L9-L65)
+- [migrate.js:10-66](file://backend/src/models/migrate.js#L10-L66)
 
 Key database design features:
 - **Unique Nonce Constraint**: Prevents replay attacks through database-level enforcement
@@ -278,25 +289,28 @@ Key database design features:
 - **Performance Indexes**: Optimized queries for common operations
 
 **Section sources**
-- [migrate.js:9-65](file://backend/src/models/migrate.js#L9-L65)
-- [queries.js:208-256](file://backend/src/models/queries.js#L208-L256)
+- [migrate.js:10-66](file://backend/src/models/migrate.js#L10-L66)
+- [queries.js:250-293](file://backend/src/models/queries.js#L250-L293)
 
 ### Error Handling and Validation
 The system implements comprehensive error handling across multiple layers:
 
 | Error Type | HTTP Status | Description | Prevention |
 |------------|-------------|-------------|------------|
-| Invalid Public Key | 400 | Malformed Solana address format | Input validation |
+| Invalid Agent ID | 400 | Malformed agent identifier format | Input validation |
 | Agent Not Found | 404 | Non-existent agent identity | Pre-authentication check |
 | Challenge Not Found | 404 | Expired or completed verification | Single-use enforcement |
 | Challenge Expired | 401 | Exceeded configured timeout | Expiration validation |
 | Invalid Signature | 401 | Cryptographic verification failure | Ed25519 verification |
 | Invalid Encoding | 401 | Base58 decoding failure | Input sanitization |
+| Invalid Public Key | 400 | Malformed Solana address format | Base58 validation |
+
+**Updated** Enhanced error handling now includes specific validation for Base58 encoding failures, providing clearer error messages for malformed cryptographic inputs.
 
 **Section sources**
-- [verify.js:23-40](file://backend/src/routes/verify.js#L23-L40)
-- [verify.js:93-112](file://backend/src/routes/verify.js#L93-L112)
-- [pkiChallenge.js:74-76](file://backend/src/services/pkiChallenge.js#L74-L76)
+- [verify.js:22-46](file://backend/src/routes/verify.js#L22-L46)
+- [verify.js:92-118](file://backend/src/routes/verify.js#L92-L118)
+- [pkiChallenge.js:76-82](file://backend/src/services/pkiChallenge.js#L76-L82)
 
 ## Dependency Analysis
 The PKI Challenge-Response system has minimal external dependencies while maintaining strong security guarantees:
@@ -361,6 +375,8 @@ The system is designed for optimal performance with the following characteristic
 - **Timeout Configuration**: Balanced response times vs. reliability
 - **Compression**: Optional gzip compression for large responses
 
+**Updated** The consistent Base58 encoding implementation improves network efficiency and reduces payload sizes compared to raw binary data transmission.
+
 **Section sources**
 - [db.js:31-39](file://backend/src/models/db.js#L31-L39)
 - [rateLimit.js:23-42](file://backend/src/middleware/rateLimit.js#L23-L42)
@@ -379,7 +395,7 @@ The system is designed for optimal performance with the following characteristic
 
 **Solutions**:
 - Request a new challenge from `/verify/challenge`
-- Verify nonce and pubkey match the original issuance
+- Verify nonce and agentId match the original issuance
 - Check challenge expiration (default 300 seconds)
 
 #### Expiration Timeout Issues
@@ -408,6 +424,18 @@ The system is designed for optimal performance with the following characteristic
 - Validate Base58 encoding correctness
 - Confirm public key is 32-byte Ed25519 key
 
+#### Encoding Validation Issues
+**Symptoms**: 401 Unauthorized with "Invalid encoding"
+**Causes**:
+- Malformed Base58 encoded data
+- Incorrect character set in encoded strings
+- Truncated or corrupted encoded data
+
+**Solutions**:
+- Verify Base58 encoding using proper validation libraries
+- Check for whitespace or special characters in encoded strings
+- Ensure complete Base58 strings without padding issues
+
 #### Database Connectivity Issues
 **Symptoms**: Internal server errors or timeouts
 **Causes**:
@@ -420,9 +448,11 @@ The system is designed for optimal performance with the following characteristic
 - Monitor database health metrics
 - Configure appropriate connection limits
 
+**Updated** Added troubleshooting guidance for Base58 encoding validation issues, which are now a critical part of the verification process.
+
 **Section sources**
-- [verify.js:93-112](file://backend/src/routes/verify.js#L93-L112)
-- [pkiChallenge.js:54-63](file://backend/src/services/pkiChallenge.js#L54-L63)
+- [verify.js:92-118](file://backend/src/routes/verify.js#L92-L118)
+- [pkiChallenge.js:64-70](file://backend/src/services/pkiChallenge.js#L64-L70)
 
 ## Security Considerations
 
@@ -456,9 +486,11 @@ The system is designed for optimal performance with the following characteristic
 - **Environment Configuration**: Secure handling of secrets and configuration
 - **Health Monitoring**: Proactive detection of security issues
 
+**Updated** Enhanced security practices now include comprehensive Base58 encoding validation and standardized cryptographic data handling throughout the entire system.
+
 **Section sources**
-- [pkiChallenge.js:78-83](file://backend/src/services/pkiChallenge.js#L78-L83)
-- [verify.js:23-31](file://backend/src/routes/verify.js#L23-L31)
+- [pkiChallenge.js:76-82](file://backend/src/services/pkiChallenge.js#L76-L82)
+- [verify.js:22-35](file://backend/src/routes/verify.js#L22-L35)
 - [rateLimit.js:23-42](file://backend/src/middleware/rateLimit.js#L23-L42)
 
 ## Relationship to SAID's Similar Verification Approach
@@ -483,11 +515,13 @@ The systems can work together to provide comprehensive identity verification:
 - Combined approach offers both local control and global recognition
 
 **Section sources**
-- [pkiChallenge.js:78-83](file://backend/src/services/pkiChallenge.js#L78-L83)
-- [server.js:84-86](file://backend/server.js#L84-L86)
+- [pkiChallenge.js:76-82](file://backend/src/services/pkiChallenge.js#L76-L82)
+- [server.js:96-100](file://backend/server.js#L96-L100)
 
 ## Conclusion
-The PKI Challenge-Response system in AgentID provides a robust, secure solution for preventing agent spoofing through cryptographic verification. The implementation demonstrates strong security practices including cryptographically secure random nonce generation, Ed25519 signature verification, replay attack prevention, and comprehensive error handling. The modular architecture ensures maintainability while the database design provides efficient storage and retrieval of verification records.
+The PKI Challenge-Response system in AgentID provides a robust, secure solution for preventing agent spoofing through cryptographic verification. The implementation demonstrates strong security practices including cryptographically secure random nonce generation, Ed25519 signature verification, replay attack prevention, and comprehensive error handling.
+
+**Updated** The recent encoding standardization changes have significantly enhanced the system's reliability and security by implementing consistent Base58 encoding across all challenge data, improving transport efficiency, and providing robust error handling for malformed inputs.
 
 Key strengths of the system include:
 - **Strong Cryptographic Foundation**: Ed25519 signatures with proper key management
@@ -495,5 +529,6 @@ Key strengths of the system include:
 - **Comprehensive Error Handling**: Clear error responses with appropriate HTTP status codes
 - **Performance Optimization**: Efficient database design and connection pooling
 - **Security Best Practices**: Input validation, rate limiting, and secure configuration management
+- **Encoding Standardization**: Consistent Base58 encoding for all challenge data enhances reliability and security
 
 The system serves as a foundation for broader identity verification workflows while maintaining independence from external identity providers, offering flexibility for various deployment scenarios and integration requirements.
