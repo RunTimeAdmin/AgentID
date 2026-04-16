@@ -20,6 +20,13 @@
 - [package.json](file://backend/package.json)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated service import statements to use explicit `.js` extensions for better module resolution
+- Enhanced documentation to reflect consistent file extension patterns across all service modules
+- Updated dependency injection patterns to show explicit file extensions in import statements
+- Improved maintainability documentation with consistent naming conventions
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -34,6 +41,8 @@
 
 ## Introduction
 This document describes the AgentID service layer with a focus on business logic and integration services. It covers authentication services (Bags authentication wrapper and signature verification), identity services (SAID protocol integration and identity binding), reputation services (Bags ecosystem scoring and optimization), and badge services (trust badge generation, SVG creation, and widget building). It also documents service interfaces, dependency injection patterns, error handling strategies, external API integrations, usage examples, configuration options, testing strategies, service orchestration, transaction management, and asynchronous operation patterns.
+
+**Updated** The service layer now uses consistent explicit `.js` file extensions in import statements for improved module resolution and maintainability across all service modules.
 
 ## Project Structure
 The backend is organized around layered concerns:
@@ -56,25 +65,25 @@ Models --> Redis["Redis"]
 ```
 
 **Diagram sources**
-- [server.js:1-76](file://backend/server.js#L1-L76)
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [server.js:1-91](file://backend/server.js#L1-L91)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 - [badge.js:1-58](file://backend/src/routes/badge.js#L1-L58)
 - [reputation.js:1-44](file://backend/src/routes/reputation.js#L1-L44)
-- [widget.js:1-103](file://backend/src/routes/widget.js#L1-L103)
-- [bagsAuthVerifier.js:1-87](file://backend/src/services/bagsAuthVerifier.js#L1-L87)
-- [bagsReputation.js:1-147](file://backend/src/services/bagsReputation.js#L1-L147)
+- [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
+- [bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
+- [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 - [saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
-- [badgeBuilder.js:1-512](file://backend/src/services/badgeBuilder.js#L1-L512)
+- [badgeBuilder.js:1-497](file://backend/src/services/badgeBuilder.js#L1-L497)
 - [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
-- [queries.js:1-385](file://backend/src/models/queries.js#L1-L385)
-- [config/index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
 - [rateLimit.js](file://backend/src/middleware/rateLimit.js)
 - [errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
 
 **Section sources**
-- [server.js:1-76](file://backend/server.js#L1-L76)
-- [package.json:1-35](file://backend/package.json#L1-L35)
+- [server.js:1-91](file://backend/server.js#L1-L91)
+- [package.json:1-38](file://backend/package.json#L1-L38)
 
 ## Core Components
 - Authentication services
@@ -88,11 +97,11 @@ Models --> Redis["Redis"]
   - JSON, SVG, and HTML widget generation with caching and sanitization
 
 **Section sources**
-- [bagsAuthVerifier.js:1-87](file://backend/src/services/bagsAuthVerifier.js#L1-L87)
+- [bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
 - [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
 - [saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
-- [bagsReputation.js:1-147](file://backend/src/services/bagsReputation.js#L1-L147)
-- [badgeBuilder.js:1-512](file://backend/src/services/badgeBuilder.js#L1-L512)
+- [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
+- [badgeBuilder.js:1-497](file://backend/src/services/badgeBuilder.js#L1-L497)
 
 ## Architecture Overview
 The service layer follows a clean architecture pattern:
@@ -145,18 +154,18 @@ C1 --> S5
 ```
 
 **Diagram sources**
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 - [badge.js:1-58](file://backend/src/routes/badge.js#L1-L58)
 - [reputation.js:1-44](file://backend/src/routes/reputation.js#L1-L44)
-- [widget.js:1-103](file://backend/src/routes/widget.js#L1-L103)
-- [bagsAuthVerifier.js:1-87](file://backend/src/services/bagsAuthVerifier.js#L1-L87)
+- [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
+- [bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
 - [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
 - [saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
-- [bagsReputation.js:1-147](file://backend/src/services/bagsReputation.js#L1-L147)
-- [badgeBuilder.js:1-512](file://backend/src/services/badgeBuilder.js#L1-L512)
+- [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
+- [badgeBuilder.js:1-497](file://backend/src/services/badgeBuilder.js#L1-L497)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
-- [queries.js:1-385](file://backend/src/models/queries.js#L1-L385)
-- [config/index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
 
 ## Detailed Component Analysis
 
@@ -188,17 +197,17 @@ Route-->>Client : "verification result"
 ```
 
 **Diagram sources**
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
-- [bagsAuthVerifier.js:18-80](file://backend/src/services/bagsAuthVerifier.js#L18-L80)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
+- [bagsAuthVerifier.js:18-86](file://backend/src/services/bagsAuthVerifier.js#L18-L86)
 
 **Section sources**
-- [bagsAuthVerifier.js:18-80](file://backend/src/services/bagsAuthVerifier.js#L18-L80)
-- [agents.js:116-248](file://backend/src/routes/agents.js#L116-L248)
+- [bagsAuthVerifier.js:18-86](file://backend/src/services/bagsAuthVerifier.js#L18-L86)
+- [agents.js:124-252](file://backend/src/routes/agents.js#L124-L252)
 
 #### PKI Challenge-Response
 - Issues a time-bound challenge with a random nonce and stores it in the database
 - Verifies incoming signatures against the stored challenge and marks completion
-- Updates the agent’s last verified timestamp upon successful verification
+- Updates the agent's last verified timestamp upon successful verification
 
 ```mermaid
 flowchart TD
@@ -220,11 +229,11 @@ Update --> Done(["Return verified"])
 
 **Diagram sources**
 - [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
-- [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
+- [queries.js:230-256](file://backend/src/models/queries.js#L230-L256)
 
 **Section sources**
 - [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
-- [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
+- [queries.js:230-256](file://backend/src/models/queries.js#L230-L256)
 
 ### Identity Services
 
@@ -253,12 +262,12 @@ Said-->>Route : "Agents list"
 ```
 
 **Diagram sources**
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 - [saidBinding.js:21-112](file://backend/src/services/saidBinding.js#L21-L112)
 
 **Section sources**
 - [saidBinding.js:21-112](file://backend/src/services/saidBinding.js#L21-L112)
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 
 ### Reputation Services
 
@@ -343,7 +352,7 @@ WidgetRoute-->>Client : "200 HTML"
 
 **Diagram sources**
 - [badge.js:16-55](file://backend/src/routes/badge.js#L16-L55)
-- [widget.js:32-100](file://backend/src/routes/widget.js#L32-L100)
+- [widget.js:18-86](file://backend/src/routes/widget.js#L18-L86)
 - [badgeBuilder.js:16-83](file://backend/src/services/badgeBuilder.js#L16-L83)
 - [badgeBuilder.js:169-475](file://backend/src/services/badgeBuilder.js#L169-L475)
 - [bagsReputation.js:16-123](file://backend/src/services/bagsReputation.js#L16-L123)
@@ -355,13 +364,15 @@ WidgetRoute-->>Client : "200 HTML"
 - [badgeBuilder.js:89-162](file://backend/src/services/badgeBuilder.js#L89-L162)
 - [badgeBuilder.js:169-475](file://backend/src/services/badgeBuilder.js#L169-L475)
 - [badge.js:16-55](file://backend/src/routes/badge.js#L16-L55)
-- [widget.js:32-100](file://backend/src/routes/widget.js#L32-L100)
+- [widget.js:18-86](file://backend/src/routes/widget.js#L18-L86)
 
 ### Service Interfaces and Dependency Injection Patterns
 - Services export functions via module exports and are consumed by routes
 - Configuration is injected through a centralized config module
 - Models are injected via direct requires and expose reusable query functions
 - External dependencies are declared in package.json and injected as needed
+
+**Updated** All service imports now use explicit `.js` file extensions for consistent module resolution and maintainability.
 
 ```mermaid
 graph LR
@@ -376,23 +387,23 @@ ExtDeps --> RedisLib["ioredis"]
 ```
 
 **Diagram sources**
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 - [badge.js:1-58](file://backend/src/routes/badge.js#L1-L58)
 - [reputation.js:1-44](file://backend/src/routes/reputation.js#L1-L44)
-- [widget.js:1-103](file://backend/src/routes/widget.js#L1-L103)
-- [bagsAuthVerifier.js:1-87](file://backend/src/services/bagsAuthVerifier.js#L1-L87)
-- [bagsReputation.js:1-147](file://backend/src/services/bagsReputation.js#L1-L147)
+- [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
+- [bagsAuthVerifier.js:1-93](file://backend/src/services/bagsAuthVerifier.js#L1-L93)
+- [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 - [saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
-- [badgeBuilder.js:1-512](file://backend/src/services/badgeBuilder.js#L1-L512)
+- [badgeBuilder.js:1-497](file://backend/src/services/badgeBuilder.js#L1-L497)
 - [pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
 - [db.js:1-45](file://backend/src/models/db.js#L1-L45)
-- [queries.js:1-385](file://backend/src/models/queries.js#L1-L385)
-- [config/index.js:1-30](file://backend/src/config/index.js#L1-L30)
-- [package.json:18-29](file://backend/package.json#L18-L29)
+- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
+- [package.json:18-31](file://backend/package.json#L18-L31)
 
 **Section sources**
-- [config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
-- [package.json:18-29](file://backend/package.json#L18-L29)
+- [config/index.js:6-31](file://backend/src/config/index.js#L6-L31)
+- [package.json:18-31](file://backend/package.json#L18-L31)
 
 ### Error Handling Strategies
 - Global error handler middleware logs structured errors and returns standardized JSON responses
@@ -419,15 +430,15 @@ Log --> Send["Send JSON response"]
 
 **Diagram sources**
 - [errorHandler.js:15-41](file://backend/src/middleware/errorHandler.js#L15-L41)
-- [agents.js:120-248](file://backend/src/routes/agents.js#L120-L248)
+- [agents.js:124-252](file://backend/src/routes/agents.js#L124-L252)
 - [badge.js:16-55](file://backend/src/routes/badge.js#L16-L55)
-- [widget.js:32-100](file://backend/src/routes/widget.js#L32-L100)
+- [widget.js:18-86](file://backend/src/routes/widget.js#L18-L86)
 - [bagsReputation.js:26-38](file://backend/src/services/bagsReputation.js#L26-L38)
 - [bagsReputation.js:79-91](file://backend/src/services/bagsReputation.js#L79-L91)
 
 **Section sources**
 - [errorHandler.js:15-41](file://backend/src/middleware/errorHandler.js#L15-L41)
-- [agents.js:120-248](file://backend/src/routes/agents.js#L120-L248)
+- [agents.js:124-252](file://backend/src/routes/agents.js#L124-L252)
 - [bagsReputation.js:26-38](file://backend/src/services/bagsReputation.js#L26-L38)
 - [bagsReputation.js:79-91](file://backend/src/services/bagsReputation.js#L79-L91)
 
@@ -438,7 +449,7 @@ Log --> Send["Send JSON response"]
 - PostgreSQL: persistent storage of agent identities, verifications, flags, and metrics
 
 **Section sources**
-- [bagsAuthVerifier.js:11,18-80](file://backend/src/services/bagsAuthVerifier.js#L11,L18-L80)
+- [bagsAuthVerifier.js:11,18-86](file://backend/src/services/bagsAuthVerifier.js#L11,L18-L86)
 - [bagsReputation.js:28-34,70-76](file://backend/src/services/bagsReputation.js#L28-L34,L70-L76)
 - [saidBinding.js:38-53,63-86,96-111](file://backend/src/services/saidBinding.js#L38-L53,L63-L86,L96-L111)
 - [badgeBuilder.js:18-24,77](file://backend/src/services/badgeBuilder.js#L18-L24,L77)
@@ -452,7 +463,7 @@ Log --> Send["Send JSON response"]
 - [agents.js:61-87](file://backend/src/routes/agents.js#L61-L87)
 - [reputation.js:17-41](file://backend/src/routes/reputation.js#L17-L41)
 - [badge.js:16-55](file://backend/src/routes/badge.js#L16-L55)
-- [widget.js:32-100](file://backend/src/routes/widget.js#L32-L100)
+- [widget.js:18-86](file://backend/src/routes/widget.js#L18-L86)
 
 ### Examples of Service Usage
 - Retrieve agent reputation: GET /reputation/:pubkey
@@ -466,8 +477,8 @@ Log --> Send["Send JSON response"]
 **Section sources**
 - [reputation.js:17-41](file://backend/src/routes/reputation.js#L17-L41)
 - [badge.js:16-55](file://backend/src/routes/badge.js#L16-L55)
-- [widget.js:32-100](file://backend/src/routes/widget.js#L32-L100)
-- [agents.js:120-248](file://backend/src/routes/agents.js#L120-L248)
+- [widget.js:18-86](file://backend/src/routes/widget.js#L18-L86)
+- [agents.js:124-252](file://backend/src/routes/agents.js#L124-L252)
 - [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
 
 ### Configuration Options
@@ -479,7 +490,7 @@ Log --> Send["Send JSON response"]
 - Cache and expiry: BADGE_CACHE_TTL, CHALLENGE_EXPIRY_SECONDS
 
 **Section sources**
-- [config/index.js:6-27](file://backend/src/config/index.js#L6-L27)
+- [config/index.js:6-31](file://backend/src/config/index.js#L6-L31)
 
 ### Testing Strategies
 - Unit tests for services: mock external APIs (axios), model queries, and Redis
@@ -494,6 +505,8 @@ The service layer exhibits low coupling and high cohesion:
 - Routes depend on services; services depend on models and config
 - External libraries are isolated in services and routes
 - No circular dependencies detected among modules
+
+**Updated** All service dependencies now use explicit `.js` extensions for consistent module resolution.
 
 ```mermaid
 graph TB
@@ -515,24 +528,24 @@ Svc --> Ext["External libs"]
 ```
 
 **Diagram sources**
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 - [badge.js:1-58](file://backend/src/routes/badge.js#L1-L58)
-- [widget.js:1-103](file://backend/src/routes/widget.js#L1-L103)
-- [bagsReputation.js:1-147](file://backend/src/services/bagsReputation.js#L1-L147)
+- [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
+- [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 - [saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
-- [badgeBuilder.js:1-512](file://backend/src/services/badgeBuilder.js#L1-L512)
-- [queries.js:1-385](file://backend/src/models/queries.js#L1-L385)
-- [config/index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [badgeBuilder.js:1-497](file://backend/src/services/badgeBuilder.js#L1-L497)
+- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
 
 **Section sources**
-- [agents.js:1-251](file://backend/src/routes/agents.js#L1-L251)
+- [agents.js:1-255](file://backend/src/routes/agents.js#L1-L255)
 - [badge.js:1-58](file://backend/src/routes/badge.js#L1-L58)
-- [widget.js:1-103](file://backend/src/routes/widget.js#L1-L103)
-- [bagsReputation.js:1-147](file://backend/src/services/bagsReputation.js#L1-L147)
+- [widget.js:1-89](file://backend/src/routes/widget.js#L1-L89)
+- [bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 - [saidBinding.js:1-119](file://backend/src/services/saidBinding.js#L1-L119)
-- [badgeBuilder.js:1-512](file://backend/src/services/badgeBuilder.js#L1-L512)
-- [queries.js:1-385](file://backend/src/models/queries.js#L1-L385)
-- [config/index.js:1-30](file://backend/src/config/index.js#L1-L30)
+- [badgeBuilder.js:1-497](file://backend/src/services/badgeBuilder.js#L1-L497)
+- [queries.js:1-404](file://backend/src/models/queries.js#L1-L404)
+- [config/index.js:1-31](file://backend/src/config/index.js#L1-L31)
 
 ## Performance Considerations
 - Caching: badge JSON is cached in Redis with configurable TTL
@@ -563,6 +576,8 @@ Svc --> Ext["External libs"]
 ## Conclusion
 The AgentID service layer cleanly separates concerns across authentication, identity, reputation, and badge services. It integrates external ecosystems (BAGS and SAID) while maintaining robust error handling, caching, and security measures. The modular design supports scalable enhancements and reliable operation under load.
 
+**Updated** The consistent use of explicit `.js` file extensions throughout the service layer improves module resolution reliability and maintainability across all service modules.
+
 ## Appendices
 
 ### Appendix A: Service Interfaces Summary
@@ -586,7 +601,7 @@ The AgentID service layer cleanly separates concerns across authentication, iden
   - getWidgetHTML(pubkey): Promise<string>
 
 **Section sources**
-- [bagsAuthVerifier.js:18-80](file://backend/src/services/bagsAuthVerifier.js#L18-L80)
+- [bagsAuthVerifier.js:18-86](file://backend/src/services/bagsAuthVerifier.js#L18-L86)
 - [pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
 - [saidBinding.js:21-112](file://backend/src/services/saidBinding.js#L21-L112)
 - [bagsReputation.js:16-141](file://backend/src/services/bagsReputation.js#L16-L141)

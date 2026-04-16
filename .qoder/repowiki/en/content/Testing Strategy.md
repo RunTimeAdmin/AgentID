@@ -15,6 +15,8 @@
 - [backend/tests/bagsReputation.test.js](file://backend/tests/bagsReputation.test.js)
 - [backend/tests/pkiChallenge.test.js](file://backend/tests/pkiChallenge.test.js)
 - [backend/tests/transform.test.js](file://backend/tests/transform.test.js)
+- [backend/src/config/__mocks__/index.js](file://backend/src/config/__mocks__/index.js)
+- [backend/src/models/__mocks__/db.js](file://backend/src/models/__mocks__/db.js)
 - [frontend/src/main.jsx](file://frontend/src/main.jsx)
 - [frontend/src/App.jsx](file://frontend/src/App.jsx)
 - [frontend/src/pages/Register.jsx](file://frontend/src/pages/Register.jsx)
@@ -22,15 +24,16 @@
 - [frontend/src/components/TrustBadge.jsx](file://frontend/src/components/TrustBadge.jsx)
 - [frontend/src/lib/api.js](file://frontend/src/lib/api.js)
 - [frontend/src/widget/Widget.jsx](file://frontend/src/widget/Widget.jsx)
+- [frontend/vite.config.js](file://frontend/vite.config.js)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive unit testing recommendations for new service components
-- Updated service layer testing strategy to include BAGS reputation scoring, PKI challenge system, and data transformation utilities
-- Enhanced testing framework documentation to reflect Vitest adoption
-- Expanded integration testing recommendations for external service mocking
-- Updated dependency analysis to include new service components
+- Updated testing framework documentation to reflect migration from Vitest to Jest
+- Enhanced service layer testing strategy to include comprehensive BAGS reputation scoring and PKI challenge system testing
+- Added documentation for new dedicated mock modules for configuration and database interactions
+- Expanded integration testing recommendations with sophisticated external dependency mocking
+- Updated dependency analysis to include new service components and testing infrastructure
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -45,13 +48,13 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document defines a comprehensive testing strategy for the AgentID system. It covers unit testing, integration testing, and end-to-end testing across backend services, frontend components, and widget integrations. The strategy emphasizes robustness against spoofing, accurate PKI challenge-response verification, reliable external service interactions, and consistent user experiences across browsers. The testing infrastructure has been significantly enhanced with comprehensive test suites for BAGS reputation scoring, PKI challenge system, and data transformation utilities.
+This document defines a comprehensive testing strategy for the AgentID system. It covers unit testing, integration testing, and end-to-end testing across backend services, frontend components, and widget integrations. The strategy emphasizes robustness against spoofing, accurate PKI challenge-response verification, reliable external service interactions, and consistent user experiences across browsers. The testing infrastructure has been significantly enhanced with comprehensive test suites for BAGS reputation scoring, PKI challenge system, and data transformation utilities, now powered by Jest as the primary testing framework.
 
 ## Project Structure
 AgentID comprises:
 - Backend (Node.js/Express): API routes, middleware, services, and models
 - Frontend (React/Vite): Pages, components, and widget
-- Comprehensive test infrastructure using Vitest for unit testing
+- Comprehensive test infrastructure using Jest for unit testing with sophisticated mocking capabilities
 
 ```mermaid
 graph TB
@@ -63,6 +66,8 @@ M1["Middleware<br/>errorHandler.js"]
 M2["Middleware<br/>rateLimit.js"]
 S1["Services<br/>bagsReputation.js"]
 S2["Services<br/>pkiChallenge.js"]
+CM["Config Mocks<br/>__mocks__/index.js"]
+DM["DB Mocks<br/>__mocks__/db.js"]
 end
 subgraph "Frontend"
 F1["Pages<br/>Register.jsx"]
@@ -72,8 +77,8 @@ F4["Lib<br/>api.js"]
 F5["Widget<br/>Widget.jsx"]
 end
 subgraph "Test Infrastructure"
-T1["bagsReputation.test.js<br/>289 lines"]
-T2["pkiChallenge.test.js<br/>184 lines"]
+T1["bagsReputation.test.js<br/>296 lines"]
+T2["pkiChallenge.test.js<br/>169 lines"]
 T3["transform.test.js<br/>181 lines"]
 end
 R1 --> U1
@@ -89,6 +94,10 @@ F1 --> F4
 F2 --> F3
 F3 --> F4
 F5 --> F4
+CM --> S1
+CM --> S2
+DM --> S1
+DM --> S2
 ```
 
 **Diagram sources**
@@ -99,9 +108,11 @@ F5 --> F4
 - [backend/src/middleware/rateLimit.js:1-62](file://backend/src/middleware/rateLimit.js#L1-L62)
 - [backend/src/services/bagsReputation.js:1-146](file://backend/src/services/bagsReputation.js#L1-L146)
 - [backend/src/services/pkiChallenge.js:1-102](file://backend/src/services/pkiChallenge.js#L1-L102)
+- [backend/src/config/__mocks__/index.js:1-20](file://backend/src/config/__mocks__/index.js#L1-L20)
+- [backend/src/models/__mocks__/db.js:1-13](file://backend/src/models/__mocks__/db.js#L1-L13)
 - [backend/tests/bagsReputation.test.js:1-296](file://backend/tests/bagsReputation.test.js#L1-L296)
-- [backend/tests/pkiChallenge.test.js:1-187](file://backend/tests/pkiChallenge.test.js#L1-L187)
-- [backend/tests/transform.test.js:1-182](file://backend/tests/transform.test.js#L1-L182)
+- [backend/tests/pkiChallenge.test.js:1-169](file://backend/tests/pkiChallenge.test.js#L1-L169)
+- [backend/tests/transform.test.js:1-181](file://backend/tests/transform.test.js#L1-L181)
 - [frontend/src/pages/Register.jsx](file://frontend/src/pages/Register.jsx)
 - [frontend/src/pages/AgentDetail.jsx](file://frontend/src/pages/AgentDetail.jsx)
 - [frontend/src/components/TrustBadge.jsx](file://frontend/src/components/TrustBadge.jsx)
@@ -119,6 +130,7 @@ F5 --> F4
 - **New**: BAGS reputation service computes comprehensive reputation scores using 5 factors with graceful degradation.
 - **New**: PKI challenge service manages Ed25519 challenge-response verification with base58 encoding.
 - **New**: Enhanced transform utilities include HTML escaping and Solana address validation.
+- **New**: Dedicated mock modules provide isolated testing with predictable behavior for external dependencies.
 
 **Section sources**
 - [backend/src/routes/register.js:15-153](file://backend/src/routes/register.js#L15-L153)
@@ -128,13 +140,15 @@ F5 --> F4
 - [backend/src/middleware/errorHandler.js:15-41](file://backend/src/middleware/errorHandler.js#L15-L41)
 - [backend/src/services/bagsReputation.js:16-122](file://backend/src/services/bagsReputation.js#L16-L122)
 - [backend/src/services/pkiChallenge.js:17-96](file://backend/src/services/pkiChallenge.js#L17-L96)
+- [backend/src/config/__mocks__/index.js:5-16](file://backend/src/config/__mocks__/index.js#L5-L16)
+- [backend/src/models/__mocks__/db.js:5-13](file://backend/src/models/__mocks__/db.js#L5-L13)
 
 ## Architecture Overview
 The testing strategy targets four layers with comprehensive coverage:
-- Unit tests: Route handlers, utilities, middleware, and new service components
+- Unit tests: Route handlers, utilities, middleware, and new service components using Jest
 - Integration tests: API endpoints, database, and external services
 - End-to-end tests: User workflows, widget embedding, performance, and cross-browser compatibility
-- **Enhanced**: Service layer testing with detailed mocking strategies for external dependencies
+- **Enhanced**: Service layer testing with sophisticated mocking strategies for external dependencies
 
 ```mermaid
 graph TB
@@ -186,7 +200,7 @@ E3 --> E5
 
 #### Route Handlers
 - Test input validation, error responses, and happy paths
-- Mock middleware and model dependencies
+- Mock middleware and model dependencies using Jest
 - Validate transformed responses
 
 Recommended tests:
@@ -216,7 +230,7 @@ Test data management:
 #### Services Layer Testing
 
 ##### BAGS Reputation Service
-- **New**: Comprehensive testing for 5-factor scoring algorithm
+- **New**: Comprehensive testing for 5-factor scoring algorithm using Jest
 - **New**: Graceful degradation when external APIs fail
 - **New**: Label threshold validation (HIGH, MEDIUM, LOW, UNVERIFIED)
 - **New**: Breakdown validation ensuring scores sum correctly
@@ -230,7 +244,7 @@ Recommended tests:
 - Mixed API failure scenarios
 
 Mock strategies:
-- Mock external API calls with axios
+- Mock external API calls with axios using Jest
 - Mock database queries for agent data and actions
 - Mock SAID trust score service
 - Use deterministic test data for reproducible results
@@ -245,7 +259,7 @@ Test data management:
 - [backend/tests/bagsReputation.test.js:58-294](file://backend/tests/bagsReputation.test.js#L58-L294)
 
 ##### PKI Challenge Service
-- **New**: Ed25519 signature verification testing
+- **New**: Ed25519 signature verification testing using Jest
 - **New**: Challenge issuance and format validation
 - **New**: Base58 encoding/decoding verification
 - **New**: Expiration and replay protection testing
@@ -325,7 +339,7 @@ Recommended tests:
 - Error propagation from external services to clients
 
 Mock strategies:
-- Use vitest to stub external HTTP calls
+- Use Jest to stub external HTTP calls
 - Use an in-memory Postgres container for DB tests
 - Use a local Redis instance for cache tests
 
@@ -368,11 +382,14 @@ Recommended tests:
 Mock strategies:
 - HTTP mocking libraries to simulate external APIs
 - Use fake credentials and deterministic responses
+- **New**: Dedicated mock modules for configuration and database interactions
 
 **Section sources**
 - [agentid_build_plan.md:42-86](file://agentid_build_plan.md#L42-L86)
 - [agentid_build_plan.md:132-184](file://agentid_build_plan.md#L132-L184)
 - [agentid_build_plan.md:185-227](file://agentid_build_plan.md#L185-L227)
+- [backend/src/config/__mocks__/index.js:5-16](file://backend/src/config/__mocks__/index.js#L5-L16)
+- [backend/src/models/__mocks__/db.js:5-13](file://backend/src/models/__mocks__/db.js#L5-L13)
 
 ### End-to-End Testing Strategy
 
@@ -426,6 +443,7 @@ Recommended tests:
 **Section sources**
 - [frontend/src/main.jsx:1-11](file://frontend/src/main.jsx#L1-L11)
 - [frontend/src/App.jsx](file://frontend/src/App.jsx)
+- [frontend/vite.config.js:31-40](file://frontend/vite.config.js#L31-L40)
 
 ## Dependency Analysis
 Testing dependencies and coupling:
@@ -434,6 +452,7 @@ Testing dependencies and coupling:
 - Middleware depends on configuration; test both production and development modes
 - Frontend components depend on API; mock API responses
 - **New**: Service components have complex external dependencies requiring sophisticated mocking
+- **New**: Dedicated mock modules facilitate isolated testing with predictable behavior
 
 ```mermaid
 graph LR
@@ -462,6 +481,10 @@ B["Bags API<br/>+ new"]
 SG["SAID Gateway<br/>+ new"]
 RC["Redis"]
 end
+subgraph "Mock Infrastructure"
+CM["config/__mocks__<br/>+ new"]
+DM["models/__mocks__<br/>+ new"]
+end
 R --> S1
 R --> S2
 R --> Q
@@ -479,6 +502,11 @@ S3 --> RC
 S4 --> B
 S4 --> SG
 S4 --> Q
+CM --> S1
+CM --> S2
+CM --> S3
+CM --> S4
+DM --> Q
 ```
 
 **Diagram sources**
@@ -489,6 +517,8 @@ S4 --> Q
 - [backend/src/middleware/errorHandler.js:1-44](file://backend/src/middleware/errorHandler.js#L1-L44)
 - [backend/src/services/bagsReputation.js:6-9](file://backend/src/services/bagsReputation.js#L6-L9)
 - [backend/src/services/pkiChallenge.js:6-10](file://backend/src/services/pkiChallenge.js#L6-L10)
+- [backend/src/config/__mocks__/index.js:5-16](file://backend/src/config/__mocks__/index.js#L5-L16)
+- [backend/src/models/__mocks__/db.js:5-13](file://backend/src/models/__mocks__/db.js#L5-L13)
 - [agentid_build_plan.md:42-86](file://agentid_build_plan.md#L42-L86)
 - [agentid_build_plan.md:132-184](file://agentid_build_plan.md#L132-L184)
 
@@ -505,6 +535,7 @@ S4 --> Q
 - Use streaming and pagination for large lists
 - Monitor and alert on latency spikes and error rates
 - **New**: Optimize service layer tests to minimize external API calls during unit testing
+- **New**: Leverage Jest's efficient test runner for faster test execution
 
 [No sources needed since this section provides general guidance]
 
@@ -516,6 +547,7 @@ Common issues and debugging techniques:
 - Database deadlocks: optimize queries and use connection pooling
 - **New**: BAGS reputation scoring errors: validate API responses and fallback logic
 - **New**: PKI challenge failures: verify base58 encoding and Ed25519 signature validation
+- **New**: Jest-specific issues: check mock configurations and test environment setup
 
 **Section sources**
 - [backend/src/routes/verify.js:78-107](file://backend/src/routes/verify.js#L78-L107)
@@ -523,17 +555,18 @@ Common issues and debugging techniques:
 - [agentid_build_plan.md:132-184](file://agentid_build_plan.md#L132-L184)
 
 ## Conclusion
-A layered testing strategy ensures AgentID remains secure, reliable, and performant. Unit tests guard core logic including the new comprehensive service components, integration tests validate end-to-end flows with controlled external dependencies, and E2E tests validate user workflows and cross-browser compatibility. The enhanced testing infrastructure with Vitest provides robust coverage for BAGS reputation scoring, PKI challenge systems, and data transformation utilities. Combined with performance and reliability practices, this approach supports safe releases and rapid iteration.
+A layered testing strategy ensures AgentID remains secure, reliable, and performant. Unit tests guard core logic including the new comprehensive service components, integration tests validate end-to-end flows with controlled external dependencies, and E2E tests validate user workflows and cross-browser compatibility. The enhanced testing infrastructure with Jest provides robust coverage for BAGS reputation scoring, PKI challenge systems, and data transformation utilities, along with sophisticated mocking capabilities through dedicated mock modules. Combined with performance and reliability practices, this approach supports safe releases and rapid iteration.
 
 [No sources needed since this section summarizes without analyzing specific files]
 
 ## Appendices
 
 ### Testing Frameworks and Tooling
-- Backend: **Enhanced**: Vitest for unit testing with comprehensive mocking support
+- Backend: **Enhanced**: Jest for unit testing with comprehensive mocking support and dedicated mock modules
 - Frontend: Component testing library, snapshot testing, browser automation, performance tools
 - CI/CD: Automated linting, unit and integration tests, E2E matrix, artifact publishing
-- **New**: Service layer testing with sophisticated external dependency mocking
+- **New**: Sophisticated external dependency mocking with Jest
+- **New**: Dedicated mock modules for configuration and database interactions
 
 **Section sources**
 - [backend/package.json:6-12](file://backend/package.json#L6-L12)
@@ -544,6 +577,7 @@ A layered testing strategy ensures AgentID remains secure, reliable, and perform
 - Integration tests: ensure critical paths through models and external services
 - E2E tests: cover primary user journeys and widget embedding
 - **New**: Service components require comprehensive coverage for external API interactions and error handling
+- **New**: Mock modules should be tested for proper isolation and predictable behavior
 
 [No sources needed since this section provides general guidance]
 
@@ -552,6 +586,7 @@ A layered testing strategy ensures AgentID remains secure, reliable, and perform
 - Parallelize unit, integration, and E2E jobs
 - Publish artifacts and maintain test reports
 - **New**: Automated testing for service layer components with external dependency mocking
+- **New**: Mock module validation in CI pipeline
 
 [No sources needed since this section provides general guidance]
 
@@ -560,8 +595,12 @@ A layered testing strategy ensures AgentID remains secure, reliable, and perform
 - **New**: Implement graceful degradation testing for external API failures
 - **New**: Validate mathematical calculations with known expected outcomes
 - **New**: Test boundary conditions for scoring algorithms and label thresholds
+- **New**: Leverage Jest's advanced mocking capabilities for external dependencies
+- **New**: Utilize dedicated mock modules for consistent test environments
 
 **Section sources**
 - [backend/tests/bagsReputation.test.js:58-294](file://backend/tests/bagsReputation.test.js#L58-L294)
 - [backend/tests/pkiChallenge.test.js:45-185](file://backend/tests/pkiChallenge.test.js#L45-L185)
 - [backend/tests/transform.test.js:9-181](file://backend/tests/transform.test.js#L9-L181)
+- [backend/src/config/__mocks__/index.js:5-16](file://backend/src/config/__mocks__/index.js#L5-L16)
+- [backend/src/models/__mocks__/db.js:5-13](file://backend/src/models/__mocks__/db.js#L5-L13)

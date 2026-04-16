@@ -17,6 +17,12 @@
 - [agentid_build_plan.md](file://agentid_build_plan.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated service module import patterns to use explicit .js extensions for improved module resolution
+- Enhanced documentation to reflect consistent file extension usage across all service imports
+- Updated dependency analysis to show explicit .js extensions in internal module imports
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -41,9 +47,11 @@ The authentication system is composed of two primary services:
 - BagsAuthVerifier: wraps the Bags Ed25519 agent auth flow to verify wallet ownership
 - PKIChallenge: issues and validates Ed25519-signed challenges to prevent spoofing and replay attacks
 
+**Updated** Service modules now consistently use explicit .js extensions in import statements to improve module resolution and maintainability.
+
 ## Project Structure
 The authentication-related code resides in the backend service under the src directory. Key areas include:
-- Services: BagsAuthVerifier and PKIChallenge implementations
+- Services: BagsAuthVerifier and PKIChallenge implementations with explicit .js extensions
 - Routes: HTTP endpoints for challenge issuance and verification
 - Middleware: error handling and rate limiting
 - Models: database queries and schema migrations
@@ -348,7 +356,7 @@ AGENT_IDENTITIES ||--o{ AGENT_FLAGS : "reported_by"
 - [queries.js:213-256](file://backend/src/models/queries.js#L213-L256)
 
 ## Dependency Analysis
-The authentication services depend on several external libraries and internal modules:
+The authentication services depend on several external libraries and internal modules with consistent .js extensions:
 
 ```mermaid
 graph LR
@@ -418,8 +426,6 @@ CONFIG --> BAGS_SERVICE
 - Rate limiting: Express-rate-limit middleware provides configurable request throttling to protect endpoints from abuse.
 - Timeout configuration: External API calls include timeout settings to prevent hanging requests.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 
 ### Common Authentication Failures
@@ -468,7 +474,7 @@ The system employs a centralized error handler that:
 ## Conclusion
 The AgentID authentication services provide a robust, PKI-based solution for verifying agent identities within the Bags ecosystem. The BagsAuthVerifier service seamlessly integrates with the Bags Ed25519 authentication flow, while the PKIChallenge service offers comprehensive spoofing prevention and replay protection through Ed25519 signatures and nonce management. Together, these components establish a secure foundation for agent registration, ongoing verification, and trust badge issuance.
 
-[No sources needed since this section summarizes without analyzing specific files]
+**Updated** Service modules now consistently use explicit .js extensions in import statements, improving module resolution and maintainability across the authentication system.
 
 ## Appendices
 

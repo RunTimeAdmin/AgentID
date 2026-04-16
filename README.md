@@ -24,6 +24,12 @@ SAID Gateway    ──┘      (Node.js / Express / PG)        (JSON / SVG / ifr
 - **Cryptography:** tweetnacl (Ed25519), bs58
 - **External APIs:** Bags API, SAID Identity Gateway
 
+## Documentation
+
+- [API Reference](docs/API_REFERENCE.md) — Full API documentation
+- [Widget Guide](docs/WIDGET_GUIDE.md) — Widget integration guide
+- [Developer Guide](docs/DEVELOPER_GUIDE.md) — Developer setup and architecture
+
 ## Quick Start
 
 ```bash
