@@ -4,7 +4,7 @@
  */
 
 const express = require('express');
-const { issueChallenge, verifyChallenge } = require('../services/pkiChallenge');
+const { issueChallenge, verifyChallenge, isNonceUsed } = require('../services/pkiChallenge');
 const { getAgent } = require('../models/queries');
 const { authLimiter } = require('../middleware/rateLimit');
 
@@ -78,6 +78,15 @@ router.post('/response', authLimiter, async (req, res, next) => {
       return res.status(404).json({
         error: 'Agent not found',
         agentId
+      });
+    }
+
+    // 2.5. Check if nonce has already been used (replay prevention)
+    const nonceUsed = await isNonceUsed(nonce);
+    if (nonceUsed) {
+      return res.status(409).json({
+        error: 'Nonce has already been used',
+        nonce
       });
     }
 

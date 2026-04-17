@@ -6,7 +6,7 @@
 const express = require('express');
 const nacl = require('tweetnacl');
 const bs58 = require('bs58');
-const { getAgent, getAgentsByOwner, listAgents, countAgents, discoverAgents, updateAgent } = require('../models/queries');
+const { getAgent, getAgentsByOwner, listAgents, countAgents, discoverAgents, updateAgent, revokeAgent } = require('../models/queries');
 const { computeBagsScore } = require('../services/bagsReputation');
 const { defaultLimiter, authLimiter } = require('../middleware/rateLimit');
 const { transformAgent, transformAgents, isValidSolanaAddress } = require('../utils/transform');
@@ -267,6 +267,138 @@ router.put('/agents/:agentId/update', authLimiter, async (req, res, next) => {
     // 7. Return updated agent
     return res.status(200).json({
       agent: transformAgent(updatedAgent)
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /agents/:agentId/revoke
+ * Revoke an agent with signature verification
+ */
+router.post('/agents/:agentId/revoke', authLimiter, async (req, res, next) => {
+  try {
+    const { agentId } = req.params;
+    const { pubkey, signature, message } = req.body;
+
+    // 1. Validate required fields
+    if (!pubkey || typeof pubkey !== 'string') {
+      return res.status(400).json({
+        error: 'pubkey is required and must be a string'
+      });
+    }
+
+    if (!signature || typeof signature !== 'string') {
+      return res.status(400).json({
+        error: 'signature is required'
+      });
+    }
+
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({
+        error: 'message is required'
+      });
+    }
+
+    // 2. Check agent exists and get pubkey for verification
+    const agent = await getAgent(agentId);
+    if (!agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        agentId
+      });
+    }
+
+    // 3. Check if agent is already revoked
+    if (agent.revoked_at) {
+      return res.status(410).json({
+        error: 'Agent has already been revoked',
+        agentId,
+        revokedAt: agent.revoked_at
+      });
+    }
+
+    // 4. Verify ownership: pubkey must match agent's registered owner
+    if (agent.pubkey !== pubkey) {
+      return res.status(403).json({
+        error: 'Only the agent owner can revoke this agent'
+      });
+    }
+
+    // 5. Parse message to extract timestamp
+    // Expected format: AGENTID-REVOKE:{agentId}:{timestamp}
+    const messageParts = message.split(':');
+    if (messageParts.length !== 3 || messageParts[0] !== 'AGENTID-REVOKE') {
+      return res.status(400).json({
+        error: 'Invalid message format. Expected: AGENTID-REVOKE:{agentId}:{timestamp}'
+      });
+    }
+
+    const messageAgentId = messageParts[1];
+    const timestamp = parseInt(messageParts[2], 10);
+
+    // Verify agentId in message matches
+    if (messageAgentId !== agentId) {
+      return res.status(400).json({
+        error: 'Agent ID in message does not match URL parameter'
+      });
+    }
+
+    // 6. Check timestamp is within valid window (replay protection)
+    const now = Date.now();
+    const timestampAge = now - timestamp;
+
+    if (isNaN(timestamp) || timestampAge > TIMESTAMP_WINDOW_MS) {
+      return res.status(401).json({
+        error: 'Timestamp too old. Request must be within 5 minutes.'
+      });
+    }
+
+    if (timestamp > now + 60000) { // Allow 1 minute clock skew for future timestamps
+      return res.status(401).json({
+        error: 'Timestamp is in the future'
+      });
+    }
+
+    // 7. Verify Ed25519 signature
+    let isSignatureValid = false;
+
+    try {
+      const messageBytes = Buffer.from(message, 'utf-8');
+      const sigBytes = bs58.decode(signature);
+      const pubkeyBytes = bs58.decode(pubkey);
+
+      isSignatureValid = nacl.sign.detached.verify(messageBytes, sigBytes, pubkeyBytes);
+    } catch (sigError) {
+      console.error('Signature verification error:', sigError.message);
+      return res.status(401).json({
+        error: 'Invalid signature format'
+      });
+    }
+
+    if (!isSignatureValid) {
+      return res.status(401).json({
+        error: 'Invalid signature'
+      });
+    }
+
+    // 8. Revoke the agent
+    const revokedAgent = await revokeAgent(agentId);
+
+    if (!revokedAgent) {
+      return res.status(500).json({
+        error: 'Failed to revoke agent'
+      });
+    }
+
+    // 9. Return success response
+    return res.status(200).json({
+      success: true,
+      message: 'Agent revoked successfully',
+      agent: transformAgent(revokedAgent),
+      revokedAt: revokedAgent.revoked_at
     });
 
   } catch (error) {

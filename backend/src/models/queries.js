@@ -55,7 +55,7 @@ async function getAgentByPubkey(pubkey) {
  */
 async function getAgentsByOwner(pubkey) {
   const result = await query(
-    'SELECT * FROM agent_identities WHERE pubkey = $1 ORDER BY registered_at DESC',
+    'SELECT * FROM agent_identities WHERE pubkey = $1 AND revoked_at IS NULL ORDER BY registered_at DESC',
     [pubkey]
   );
   return result.rows;
@@ -68,7 +68,7 @@ async function getAgentsByOwner(pubkey) {
  */
 async function countAgentsByOwner(pubkey) {
   const result = await query(
-    'SELECT COUNT(*) as count FROM agent_identities WHERE pubkey = $1',
+    'SELECT COUNT(*) as count FROM agent_identities WHERE pubkey = $1 AND revoked_at IS NULL',
     [pubkey]
   );
   return parseInt(result.rows[0].count, 10);
@@ -134,6 +134,9 @@ async function listAgents({ status, capability, limit = 20, offset = 0, includeD
   if (!includeDemo) {
     conditions.push(`is_demo = false`);
   }
+  
+  // Filter out revoked agents
+  conditions.push(`revoked_at IS NULL`);
   
   values.push(limit, offset);
   
@@ -377,17 +380,19 @@ async function discoverAgents({ capability, limit = 20 } = {}) {
   
   if (capability) {
     sql = `
-      SELECT * FROM agent_identities 
+      SELECT * FROM agent_identities
       WHERE status = 'verified' 
         AND capability_set @> $1::jsonb
+        AND revoked_at IS NULL
       ORDER BY bags_score DESC
       LIMIT $2
     `;
     values = [JSON.stringify([capability]), limit];
   } else {
     sql = `
-      SELECT * FROM agent_identities 
+      SELECT * FROM agent_identities
       WHERE status = 'verified'
+        AND revoked_at IS NULL
       ORDER BY bags_score DESC
       LIMIT $1
     `;
@@ -396,6 +401,22 @@ async function discoverAgents({ capability, limit = 20 } = {}) {
   
   const result = await query(sql, values);
   return result.rows;
+}
+
+/**
+ * Revoke an agent
+ * @param {string} agentId - Agent UUID
+ * @returns {Promise<Object|null>} - Updated agent row or null
+ */
+async function revokeAgent(agentId) {
+  const sql = `
+    UPDATE agent_identities
+    SET revoked_at = NOW(), status = 'revoked'
+    WHERE agent_id = $1 AND revoked_at IS NULL
+    RETURNING *
+  `;
+  const result = await query(sql, [agentId]);
+  return result.rows[0] || null;
 }
 
 async function countAgents({ status, capability, includeDemo = false } = {}) {
@@ -416,6 +437,9 @@ async function countAgents({ status, capability, includeDemo = false } = {}) {
   if (!includeDemo) {
     queryStr += ` AND is_demo = false`;
   }
+  
+  // Filter out revoked agents
+  queryStr += ` AND revoked_at IS NULL`;
   
   const result = await query(queryStr, params);
   return parseInt(result.rows[0].count, 10);
@@ -452,6 +476,7 @@ module.exports = {
   incrementActions,
   getAgentActions,
   cleanupDemoAgents,
+  revokeAgent,
   
   // Verification queries
   createVerification,

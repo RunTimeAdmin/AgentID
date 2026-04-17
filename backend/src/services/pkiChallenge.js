@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const nacl = require('tweetnacl');
 const bs58 = require('bs58');
 const { createVerification, getVerification, completeVerification, updateLastVerified } = require('../models/queries.js');
+const { challengeStore } = require('../models/challengeStore.js');
 const config = require('../config/index.js');
 
 /**
@@ -41,6 +42,15 @@ async function issueChallenge(agentId, pubkey) {
     challenge: challengeBase58,
     expiresIn: config.challengeExpirySeconds
   };
+}
+
+/**
+ * Check if a nonce has been used (for replay prevention)
+ * @param {string} nonce - Challenge nonce
+ * @returns {Promise<boolean>} - True if nonce has been used
+ */
+async function isNonceUsed(nonce) {
+  return challengeStore.isNonceUsed(nonce);
 }
 
 /**
@@ -88,8 +98,14 @@ async function verifyChallenge(agentId, pubkey, nonce, signature) {
     throw new Error('Invalid signature');
   }
   
-  // Mark challenge as completed
+  // Mark challenge as completed in database
   await completeVerification(nonce);
+
+  // Mark nonce as used in ChallengeStore to prevent replay
+  await challengeStore.markNonceUsed(nonce, config.challengeExpirySeconds);
+
+  // Delete challenge from store to prevent reuse
+  await challengeStore.deleteChallenge(`challenge:${agentId}:${nonce}`);
 
   // Update last verified timestamp
   await updateLastVerified(agentId);
@@ -104,5 +120,6 @@ async function verifyChallenge(agentId, pubkey, nonce, signature) {
 
 module.exports = {
   issueChallenge,
-  verifyChallenge
+  verifyChallenge,
+  isNonceUsed
 };

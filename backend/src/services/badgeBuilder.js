@@ -39,10 +39,16 @@ async function getBadgeJSON(agentId) {
     // Determine status and badge
     // Status is based on PKI verification (challenge-response completion)
     // NOT on reputation score - that's what 'tier' is for
+    // Revoked status takes highest priority
     const hasCompletedVerification = agent.last_verified !== null;
+    const isRevoked = agent.revoked_at !== null;
     
     let status, badge, label;
-    if (agent.status === 'flagged') {
+    if (isRevoked) {
+      status = 'revoked';
+      badge = '⛔';
+      label = 'REVOKED';
+    } else if (agent.status === 'flagged') {
       status = 'flagged';
       badge = '🔴';
       label = 'FLAGGED';
@@ -77,6 +83,7 @@ async function getBadgeJSON(agentId) {
       saidLabel: reputation.label,
       registeredAt: agent.registered_at,
       lastVerified: agent.last_verified,
+      revokedAt: agent.revoked_at,
       totalActions: actions.total,
       successRate: successRate,
       capabilities: agent.capability_set || [],
@@ -106,7 +113,13 @@ async function getBadgeSVG(agentId) {
     let bgColor, accentColor, iconColor, tierLabel, tierBadge;
     const isVerifiedTier = badgeData.tier === 'verified';
     
-    if (badgeData.status === 'flagged') {
+    if (badgeData.status === 'revoked') {
+      bgColor = '#1a1a1a';
+      accentColor = '#6b7280';
+      iconColor = '#6b7280';
+      tierLabel = 'REVOKED';
+      tierBadge = '';
+    } else if (badgeData.status === 'flagged') {
       bgColor = '#2e1a1a';
       accentColor = '#ef4444';
       iconColor = '#ef4444';
@@ -139,7 +152,9 @@ async function getBadgeSVG(agentId) {
 
     // Status icon SVG
     let statusIcon;
-    if (badgeData.status === 'verified') {
+    if (badgeData.status === 'revoked') {
+      statusIcon = `<circle cx="24" cy="40" r="12" fill="${iconColor}" fill-opacity="0.2" stroke="${iconColor}" stroke-width="2"/><path d="M18 34l12 12M30 34l-12 12" stroke="${iconColor}" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    } else if (badgeData.status === 'verified') {
       const checkColor = isVerifiedTier ? '#FFD700' : '#3B82F6';
       statusIcon = `<circle cx="24" cy="40" r="12" fill="${checkColor}" fill-opacity="0.2" stroke="${checkColor}" stroke-width="2"/><path d="M18 40l4 4 8-8" stroke="${checkColor}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
     } else if (badgeData.status === 'flagged') {
@@ -230,7 +245,13 @@ async function getWidgetHTML(agentId) {
     let themeColor, accentColor, glowColor, tierLabel, tierBadge;
     const isVerifiedTier = badgeData.tier === 'verified';
     
-    if (badgeData.status === 'flagged') {
+    if (badgeData.status === 'revoked') {
+      themeColor = '#6b7280';
+      accentColor = '#4b5563';
+      glowColor = 'rgba(107, 114, 128, 0.3)';
+      tierLabel = 'Revoked';
+      tierBadge = '';
+    } else if (badgeData.status === 'flagged') {
       themeColor = '#ef4444';
       accentColor = '#dc2626';
       glowColor = 'rgba(239, 68, 68, 0.3)';

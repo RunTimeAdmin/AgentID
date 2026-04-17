@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS agent_identities (
   failed_actions INTEGER DEFAULT 0,
   total_fees_earned NUMERIC(20,9) DEFAULT 0,
   is_demo BOOLEAN DEFAULT false,
+  revoked_at TIMESTAMPTZ DEFAULT NULL,
   CONSTRAINT uq_agent_pubkey_name UNIQUE (pubkey, name)
 );
 
@@ -78,12 +79,19 @@ async function migrate() {
     // Add is_demo column if not exists (for existing tables)
     await client.query(`ALTER TABLE agent_identities ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false`);
     
+    // Add revoked_at column if not exists (for existing tables)
+    await client.query(`ALTER TABLE agent_identities ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ DEFAULT NULL`);
+    
+    // Add index for revoked_at for efficient filtering
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_agent_identities_revoked_at ON agent_identities(revoked_at)`);
+    
     await client.query('COMMIT');
     
     console.log('✓ Database migration completed successfully');
     console.log('  - Created table: agent_identities');
     console.log('  - Created table: agent_verifications');
     console.log('  - Created table: agent_flags');
+    console.log('  - Added revoked_at column to agent_identities');
     console.log('  - Created indexes for performance');
     
     process.exit(0);
