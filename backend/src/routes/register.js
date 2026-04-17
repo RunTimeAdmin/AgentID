@@ -7,7 +7,8 @@ const express = require('express');
 const { verifyBagsSignature } = require('../services/bagsAuthVerifier');
 const { registerWithSAID } = require('../services/saidBinding');
 const { createAgent, getAgentByPubkey } = require('../models/queries');
-const { authLimiter } = require('../middleware/rateLimit');
+const { registrationLimiter } = require('../middleware/rateLimit');
+const redis = require('../models/redis');
 const { transformAgent, isValidSolanaAddress } = require('../utils/transform');
 
 const router = express.Router();
@@ -56,7 +57,7 @@ function validateRegistrationInput(body) {
  * POST /register
  * Full agent registration flow
  */
-router.post('/register', authLimiter, async (req, res, next) => {
+router.post('/register', registrationLimiter, async (req, res, next) => {
   try {
     // 1. Validate request body
     const validationError = validateRegistrationInput(req.body);
@@ -118,6 +119,14 @@ router.post('/register', authLimiter, async (req, res, next) => {
       });
     }
 
+    // 5. Per-pubkey throttling: max 5 registrations per pubkey per 24 hours
+    const pubkeyThrottleKey = `reg:pubkey:${pubkey}`;
+    const regCount = await redis.incr(pubkeyThrottleKey);
+    if (regCount === 1) await redis.expire(pubkeyThrottleKey, 86400);
+    if (regCount > 5) {
+      return res.status(429).json({ error: 'Too many registrations for this public key. Maximum 5 per 24 hours.' });
+    }
+
     // 5. Attempt SAID binding (non-blocking)
     const timestamp = Date.now();
     let saidStatus = { registered: false, error: null };
@@ -144,7 +153,10 @@ router.post('/register', authLimiter, async (req, res, next) => {
       saidStatus = { registered: false, error: saidError.message };
     }
 
-    // 6. Store agent record
+    // 6. Check if this is a demo agent
+    const isDemo = name && name.toLowerCase().includes('demo agent');
+
+    // 7. Store agent record
     const agent = await createAgent({
       pubkey,
       name,
@@ -153,7 +165,8 @@ router.post('/register', authLimiter, async (req, res, next) => {
       bagsApiKeyId: null, // Will be set later if needed
       capabilitySet: capabilities || [],
       creatorX,
-      creatorWallet
+      creatorWallet,
+      isDemo
     });
 
     // 7. Return created agent with SAID status

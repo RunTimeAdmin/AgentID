@@ -14,16 +14,16 @@ const { query } = require('./db');
  * @param {Object} params - Agent data
  * @returns {Promise<Object>} - Created agent row
  */
-async function createAgent({ pubkey, name, description, tokenMint, capabilitySet, creatorX, creatorWallet }) {
+async function createAgent({ pubkey, name, description, tokenMint, capabilitySet, creatorX, creatorWallet, isDemo = false }) {
   const sql = `
     INSERT INTO agent_identities 
-      (pubkey, name, description, token_mint, capability_set, creator_x, creator_wallet, registered_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      (pubkey, name, description, token_mint, capability_set, creator_x, creator_wallet, registered_at, is_demo)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
     RETURNING *
   `;
   const result = await query(sql, [
     pubkey, name, description, tokenMint, 
-    JSON.stringify(capabilitySet || []), creatorX, creatorWallet
+    JSON.stringify(capabilitySet || []), creatorX, creatorWallet, isDemo
   ]);
   return result.rows[0];
 }
@@ -113,7 +113,7 @@ async function updateAgent(agentId, fields) {
  * @param {Object} params - Filter parameters
  * @returns {Promise<Array>} - Array of agent rows
  */
-async function listAgents({ status, capability, limit = 20, offset = 0 } = {}) {
+async function listAgents({ status, capability, limit = 20, offset = 0, includeDemo = false } = {}) {
   const conditions = [];
   const values = [];
   let paramIndex = 1;
@@ -128,6 +128,11 @@ async function listAgents({ status, capability, limit = 20, offset = 0 } = {}) {
     conditions.push(`capability_set @> $${paramIndex}::jsonb`);
     values.push(JSON.stringify([capability]));
     paramIndex++;
+  }
+  
+  // Filter out demo agents by default
+  if (!includeDemo) {
+    conditions.push(`is_demo = false`);
   }
   
   values.push(limit, offset);
@@ -393,7 +398,7 @@ async function discoverAgents({ capability, limit = 20 } = {}) {
   return result.rows;
 }
 
-async function countAgents({ status, capability } = {}) {
+async function countAgents({ status, capability, includeDemo = false } = {}) {
   let queryStr = 'SELECT COUNT(*) FROM agent_identities WHERE 1=1';
   const params = [];
   let paramIndex = 1;
@@ -407,8 +412,28 @@ async function countAgents({ status, capability } = {}) {
     params.push(JSON.stringify([capability]));
   }
   
+  // Filter out demo agents by default
+  if (!includeDemo) {
+    queryStr += ` AND is_demo = false`;
+  }
+  
   const result = await query(queryStr, params);
   return parseInt(result.rows[0].count, 10);
+}
+
+/**
+ * Cleanup demo agents older than 24 hours
+ * @returns {Promise<number>} - Number of deleted agents
+ */
+async function cleanupDemoAgents() {
+  const sql = `
+    DELETE FROM agent_identities 
+    WHERE is_demo = true 
+      AND registered_at < NOW() - INTERVAL '24 hours'
+    RETURNING agent_id
+  `;
+  const result = await query(sql);
+  return result.rows.length;
 }
 
 module.exports = {
@@ -426,6 +451,7 @@ module.exports = {
   updateBagsScore,
   incrementActions,
   getAgentActions,
+  cleanupDemoAgents,
   
   // Verification queries
   createVerification,

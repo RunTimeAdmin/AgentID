@@ -22,7 +22,7 @@ const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000;
  */
 router.get('/agents', defaultLimiter, async (req, res, next) => {
   try {
-    const { status, capability, limit, offset } = req.query;
+    const { status, capability, limit, offset, includeDemo } = req.query;
 
     // Parse and validate pagination params
     let parsedLimit = parseInt(limit, 10) || 50;
@@ -37,11 +37,12 @@ router.get('/agents', defaultLimiter, async (req, res, next) => {
       status,
       capability,
       limit: parsedLimit,
-      offset: parsedOffset
+      offset: parsedOffset,
+      includeDemo: includeDemo === 'true'
     });
 
     // Get total count for pagination
-    const total = await countAgents({ status, capability });
+    const total = await countAgents({ status, capability, includeDemo: includeDemo === 'true' });
 
     return res.status(200).json({
       agents: transformAgents(agents),

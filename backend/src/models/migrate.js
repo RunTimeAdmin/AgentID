@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS agent_identities (
   successful_actions INTEGER DEFAULT 0,
   failed_actions INTEGER DEFAULT 0,
   total_fees_earned NUMERIC(20,9) DEFAULT 0,
+  is_demo BOOLEAN DEFAULT false,
   CONSTRAINT uq_agent_pubkey_name UNIQUE (pubkey, name)
 );
 
@@ -73,6 +74,10 @@ async function migrate() {
     
     await client.query('BEGIN');
     await client.query(CREATE_TABLES_SQL);
+    
+    // Add is_demo column if not exists (for existing tables)
+    await client.query(`ALTER TABLE agent_identities ADD COLUMN IF NOT EXISTS is_demo BOOLEAN DEFAULT false`);
+    
     await client.query('COMMIT');
     
     console.log('✓ Database migration completed successfully');

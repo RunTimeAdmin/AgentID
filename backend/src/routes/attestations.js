@@ -24,7 +24,7 @@ const router = express.Router();
  * POST /agents/:agentId/attest
  * Record a successful/failed action
  */
-router.post('/agents/:agentId/attest', defaultLimiter, async (req, res, next) => {
+router.post('/agents/:agentId/attest', authLimiter, async (req, res, next) => {
   try {
     const { agentId } = req.params;
     const { success, action } = req.body;

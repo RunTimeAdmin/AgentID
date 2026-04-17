@@ -28,6 +28,7 @@ const helmet = require('helmet');
 const config = require('./src/config');
 const errorHandler = require('./src/middleware/errorHandler');
 const { defaultLimiter } = require('./src/middleware/rateLimit');
+const { cleanupDemoAgents } = require('./src/models/queries');
 const axios = require('axios');
 
 // Import route modules
@@ -100,6 +101,20 @@ if (require.main === module) {
     axios.get(`${config.saidGatewayUrl}/health`, { timeout: 5000 })
       .then(() => console.log('SAID Gateway: connected'))
       .catch(() => console.warn('SAID Gateway: unreachable (non-critical — SAID features will degrade gracefully)'));
+    
+    // Start demo agent cleanup job (runs every hour)
+    const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+    setInterval(async () => {
+      try {
+        const deletedCount = await cleanupDemoAgents();
+        if (deletedCount > 0) {
+          console.log(`Demo cleanup: removed ${deletedCount} demo agent(s) older than 24 hours`);
+        }
+      } catch (err) {
+        console.error('Demo cleanup error:', err.message);
+      }
+    }, CLEANUP_INTERVAL_MS);
+    console.log('Demo agent cleanup scheduled (every hour)');
   });
 }
 

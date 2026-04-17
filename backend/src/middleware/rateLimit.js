@@ -12,6 +12,9 @@ const DEFAULT_MAX_REQUESTS = 100;
 // Stricter rate limit for auth endpoints: 20 requests per 15 minutes
 const AUTH_MAX_REQUESTS = 20;
 
+// Registration rate limit: 5 requests per 15 minutes
+const REGISTRATION_MAX_REQUESTS = 5;
+
 /**
  * Creates a configurable rate limiter
  * @param {Object} options - Configuration options
@@ -54,8 +57,16 @@ const authLimiter = createLimiter({
   message: 'Too many authentication attempts, please try again later.'
 });
 
+// Registration limiter: 5 requests per 15 minutes
+const registrationLimiter = createLimiter({
+  windowMs: DEFAULT_WINDOW_MS,
+  max: REGISTRATION_MAX_REQUESTS,
+  message: 'Too many registration attempts, please try again later.'
+});
+
 module.exports = {
   createLimiter,
   defaultLimiter,
-  authLimiter
+  authLimiter,
+  registrationLimiter
 };
