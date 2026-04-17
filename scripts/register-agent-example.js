@@ -1,6 +1,19 @@
 /**
- * InfraWatch Production Agent Registration Script
- * Registers InfraWatch as the first production agent on AgentID
+ * Agent Registration Example Script
+ * 
+ * This is an example script demonstrating how to register an agent with AgentID
+ * via the API. It showcases the challenge-response authentication flow, keypair
+ * generation, and badge retrieval.
+ * 
+ * Usage:
+ *   node scripts/register-agent-example.js
+ * 
+ * Requirements:
+ *   - The backend dependencies (tweetnacl, bs58) must be installed
+ *   - Node.js with fetch API support (v18+)
+ * 
+ * This script uses the InfraWatch agent as an example. Modify the keypair,
+ * agentId, and endpoint URLs as needed for your own agent registration.
  */
 
 const nacl = require('./backend/node_modules/tweetnacl');
